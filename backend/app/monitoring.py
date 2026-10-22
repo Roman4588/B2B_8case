@@ -32,7 +32,9 @@ def ingest_alerts(db, alerts: list[dict], source: str) -> list[str]:
             raise ValueError("Некорректные метки события")
         external_id = hashlib.sha256(json.dumps(labels, sort_keys=True).encode()).hexdigest()
         active.add(external_id)
-        item = db.scalar(select(Incident).where(Incident.source == source, Incident.external_id == external_id))
+        item = db.scalar(
+            select(Incident).where(Incident.source == source, Incident.external_id == external_id)
+        )
         title = str(annotations.get("summary") or labels.get("alertname") or "Событие мониторинга")
         description = str(annotations.get("description", ""))
         fresh = item is None

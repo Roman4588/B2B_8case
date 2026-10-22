@@ -16,7 +16,9 @@ def bootstrap():
     command.upgrade(Config(str(root / "alembic.ini")), "head")
     with session_factory()() as db:
         if db.scalar(select(Operator.id).limit(1)) is None:
-            db.add(Operator(name="Дежурный инженер", password_hash=hash_password(settings().operator_password)))
+            db.add(
+                Operator(name="Дежурный инженер", password_hash=hash_password(settings().operator_password))
+            )
         records = json.loads((Path(__file__).parent / "seed" / "runbooks.json").read_text(encoding="utf-8"))
         for index, record in enumerate(records):
             key = f"seed:{index}"

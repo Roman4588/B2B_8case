@@ -15,9 +15,13 @@ def db():
 
 
 def alert():
-    return {"labels": {"alertname": "PostgresDown", "instance": "db-01", "severity": "critical"},
-            "annotations": {"summary": "PostgreSQL primary is down", "description": "No connections"},
-            "state": "firing", "activeAt": "2026-10-22T10:00:00Z", "value": "1"}
+    return {
+        "labels": {"alertname": "PostgresDown", "instance": "db-01", "severity": "critical"},
+        "annotations": {"summary": "PostgreSQL primary is down", "description": "No connections"},
+        "state": "firing",
+        "activeAt": "2026-10-22T10:00:00Z",
+        "value": "1",
+    }
 
 
 def test_repeated_polls_do_not_duplicate_and_empty_success_resolves(db):

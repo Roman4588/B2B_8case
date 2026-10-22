@@ -41,6 +41,7 @@ def extract(content: bytes, extension: str) -> str:
             text = content.decode("utf-8-sig")
         elif extension == ".pdf":
             from pypdf import PdfReader
+
             if not content.startswith(b"%PDF-"):
                 raise ValueError("Файл не является PDF")
             reader = PdfReader(BytesIO(content))
@@ -49,14 +50,17 @@ def extract(content: bytes, extension: str) -> str:
             text = "\n".join(page.extract_text() or "" for page in reader.pages)
         elif extension == ".docx":
             from docx import Document
+
             with ZipFile(BytesIO(content)) as archive:
                 if sum(item.file_size for item in archive.infolist()) > 60 * 1024 * 1024:
                     raise ValueError("Слишком большой распакованный DOCX")
                 if "word/document.xml" not in archive.namelist():
                     raise ValueError("Файл не является DOCX")
             doc = Document(BytesIO(content))
-            text = "\n".join([p.text for p in doc.paragraphs] +
-                             [" | ".join(c.text for c in row.cells) for t in doc.tables for row in t.rows])
+            text = "\n".join(
+                [p.text for p in doc.paragraphs]
+                + [" | ".join(c.text for c in row.cells) for t in doc.tables for row in t.rows]
+            )
         else:
             raise ValueError("Поддерживаются JSON, MD, TXT, PDF и DOCX")
         if not text.strip():
@@ -81,19 +85,30 @@ def parse_runbooks(text: str, extension: str, filename: str = "Документ"
                 block = block.strip()
                 if not block:
                     continue
-                match = re.search(r"(?:Если|If)\s+(.+?)\s*(?:→|->|⇒|\bthen\b)\s*(.+)", block,
-                                  flags=re.IGNORECASE | re.DOTALL)
+                match = re.search(
+                    r"(?:Если|If)\s+(.+?)\s*(?:→|->|⇒|\bthen\b)\s*(.+)",
+                    block,
+                    flags=re.IGNORECASE | re.DOTALL,
+                )
                 if match:
                     condition, action = match.groups()
-                    steps = [re.sub(r"^[-*\d.)\s]+", "", s).strip()
-                             for s in re.split(r";|\n", action) if s.strip()]
-                    records.append(dict(title=condition.strip()[:200], condition=condition.strip(), steps=steps))
+                    steps = [
+                        re.sub(r"^[-*\d.)\s]+", "", s).strip() for s in re.split(r";|\n", action) if s.strip()
+                    ]
+                    records.append(
+                        dict(title=condition.strip()[:200], condition=condition.strip(), steps=steps)
+                    )
                 else:
                     # Narrative runbooks remain searchable, with their original text as instruction.
                     for offset in range(0, len(block), 6000):
-                        part = block[offset:offset + 6000]
-                        records.append(dict(title=f"{filename[:150]} · раздел {index + 1}.{offset // 6000 + 1}",
-                                            condition=part[:2000], steps=[part]))
+                        part = block[offset : offset + 6000]
+                        records.append(
+                            dict(
+                                title=f"{filename[:150]} · раздел {index + 1}.{offset // 6000 + 1}",
+                                condition=part[:2000],
+                                steps=[part],
+                            )
+                        )
         if not records or len(records) > 2000:
             raise ValueError("Документ должен содержать от 1 до 2000 инструкций")
         return [RunbookInput.model_validate(row).model_dump() for row in records]

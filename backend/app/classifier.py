@@ -2,6 +2,7 @@
 
 No evaluation data is loaded here. The small local text model is fitted from training.json only.
 """
+
 import json
 import re
 from functools import lru_cache
@@ -20,7 +21,9 @@ CATEGORY_PATTERNS = {
     "server": r"\bcpu\b|\bram\b|memory|disk|filesystem|inode|server|host|сервер|диск|памят|процессор|температур",
 }
 INFO = r"completed|finished|succeeded|successfully|restored|resolved|восстановлен|заверш[её]н|успешн"
-CRITICAL = r"critical|критич|недоступ|отказ|авари|исчерпан|\bdown\b|unreachable|unavailable|exhaust|crashloop|outage"
+CRITICAL = (
+    r"critical|критич|недоступ|отказ|авари|исчерпан|\bdown\b|unreachable|unavailable|exhaust|crashloop|outage"
+)
 WARNING = r"warning|предупрежд|threshold|порог|elevated|rising|pressure|increas|высок|заканчива|задержк|approach|latency|utilization"
 
 
@@ -33,8 +36,10 @@ def text_models():
         for label, examples in groups.items():
             texts.extend(examples)
             labels.extend([label] * len(examples))
-        model = make_pipeline(TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5)),
-                              LogisticRegression(C=8, max_iter=500, random_state=42))
+        model = make_pipeline(
+            TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5)),
+            LogisticRegression(C=8, max_iter=500, random_state=42),
+        )
         model.fit(texts, labels)
         models[field] = model
     return models
@@ -63,8 +68,13 @@ def classify(event: dict) -> dict:
                 reasons.append("Категория: терминология события и текстовая модель")
                 break
     severity = str(labels.get("severity", "")).lower()
-    severity = {"disaster": "critical", "high": "critical", "average": "warning",
-                "information": "info", "informational": "info"}.get(severity, severity)
+    severity = {
+        "disaster": "critical",
+        "high": "critical",
+        "average": "warning",
+        "information": "info",
+        "informational": "info",
+    }.get(severity, severity)
     if severity in SEVERITIES:
         severity_conf = 1.0
         reasons.append("Тип из severity источника")
@@ -80,5 +90,11 @@ def classify(event: dict) -> dict:
         priority = "P2"
     reasons.append(f"Политика приоритета: {severity}, impact={labels.get('impact', 'normal')} → {priority}")
     confidence = round(min(category_conf, severity_conf), 4)
-    return dict(severity=severity, category=category, priority=priority, confidence=confidence,
-                needs_review=confidence < 0.65, rationale=". ".join(reasons))
+    return dict(
+        severity=severity,
+        category=category,
+        priority=priority,
+        confidence=confidence,
+        needs_review=confidence < 0.65,
+        rationale=". ".join(reasons),
+    )

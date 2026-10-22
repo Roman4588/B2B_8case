@@ -2,13 +2,28 @@ import pytest
 from app.classifier import classify
 
 
-@pytest.mark.parametrize("event,want", [
-    ({"title": "PostgreSQL primary is down", "labels": {"severity": "critical"}}, ("critical", "database", "P1")),
-    ({"title": "Заканчивается место на диске сервера", "labels": {"severity": "warning"}}, ("warning", "server", "P3")),
-    ({"title": "Packet loss on gateway", "labels": {"severity": "warning", "impact": "high"}}, ("warning", "network", "P2")),
-    ({"title": "Nginx deployment completed", "labels": {"severity": "info"}}, ("info", "application", "P4")),
-    ({"title": "Критический отказ репликации PostgreSQL"}, ("critical", "database", "P1")),
-])
+@pytest.mark.parametrize(
+    "event,want",
+    [
+        (
+            {"title": "PostgreSQL primary is down", "labels": {"severity": "critical"}},
+            ("critical", "database", "P1"),
+        ),
+        (
+            {"title": "Заканчивается место на диске сервера", "labels": {"severity": "warning"}},
+            ("warning", "server", "P3"),
+        ),
+        (
+            {"title": "Packet loss on gateway", "labels": {"severity": "warning", "impact": "high"}},
+            ("warning", "network", "P2"),
+        ),
+        (
+            {"title": "Nginx deployment completed", "labels": {"severity": "info"}},
+            ("info", "application", "P4"),
+        ),
+        ({"title": "Критический отказ репликации PostgreSQL"}, ("critical", "database", "P1")),
+    ],
+)
 def test_event_classification(event, want):
     result = classify(event)
     assert (result["severity"], result["category"], result["priority"]) == want

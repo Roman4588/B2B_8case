@@ -1,0 +1,34 @@
+name: Verify case 8
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build and start real stack
+        run: docker compose up --build -d
+      - name: Backend and real pgvector tests
+        run: docker compose --profile test run --build --rm tests
+      - name: Classifier benchmark
+        run: docker compose --profile test run --rm --no-deps tests python scripts/evaluate.py --output /tmp/classification-report.json
+      - name: Install browser and smoke dependencies
+        run: |
+          python -m venv .ci-venv
+          .ci-venv/bin/python -m pip install httpx reportlab
+          cd frontend
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Verify HTTP workflow and large PDF
+        run: .ci-venv/bin/python scripts/smoke.py
+      - name: Verify browser workflow
+        working-directory: frontend
+        run: npm run test:e2e
+      - name: Diagnostics
+        if: failure()
+        run: docker compose logs --tail=100
+      - name: Stop stack
+        if: always()
+        run: docker compose down

@@ -23,8 +23,13 @@ def verify_password(password: str, encoded: str) -> bool:
 
 def create_session(db, operator: Operator) -> str:
     token = secrets.token_urlsafe(40)
-    db.add(LoginSession(token_hash=hashlib.sha256(token.encode()).hexdigest(), operator_id=operator.id,
-                        expires_at=utcnow() + timedelta(hours=12)))
+    db.add(
+        LoginSession(
+            token_hash=hashlib.sha256(token.encode()).hexdigest(),
+            operator_id=operator.id,
+            expires_at=utcnow() + timedelta(hours=12),
+        )
+    )
     db.commit()
     return token
 

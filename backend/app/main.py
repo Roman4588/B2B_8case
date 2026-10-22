@@ -17,7 +17,9 @@ from app.documents import RunbookInput
 from app.models import AuditEntry, ImportJob, Incident, LoginSession, Operator, Runbook, SourceState, uid
 from app.operations import manual_action
 
-app = FastAPI(title="Дежурный · ИИ-ассистент", version="1.0.0", docs_url="/api/docs", openapi_url="/api/openapi.json")
+app = FastAPI(
+    title="Дежурный · ИИ-ассистент", version="1.0.0", docs_url="/api/docs", openapi_url="/api/openapi.json"
+)
 attempts = defaultdict(deque)
 
 
@@ -27,6 +29,7 @@ async def origin_and_security(request: Request, call_next):
     if request.method not in {"GET", "HEAD", "OPTIONS"} and origin:
         if urlsplit(origin).netloc != request.headers.get("host"):
             from fastapi.responses import JSONResponse
+
             return JSONResponse(status_code=403, content={"detail": "Недопустимый источник запроса"})
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -57,8 +60,15 @@ def login(body: LoginInput, request: Request, response: Response, db=Depends(get
         raise HTTPException(401, "Неверный пароль")
     queue.clear()
     token = create_session(db, operator)
-    response.set_cookie("copilot_session", token, httponly=True, samesite="strict", secure=settings().session_secure,
-                        max_age=43200, path="/api")
+    response.set_cookie(
+        "copilot_session",
+        token,
+        httponly=True,
+        samesite="strict",
+        secure=settings().session_secure,
+        max_age=43200,
+        path="/api",
+    )
     return {"id": operator.id, "name": operator.name}
 
 
@@ -88,6 +98,7 @@ def ready(response: Response, db=Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
         from redis import Redis
+
         Redis.from_url(settings().redis_url, socket_connect_timeout=2, socket_timeout=2).ping()
         count = db.scalar(select(func.count()).select_from(Runbook).where(Runbook.status == "ready"))
         response.status_code = 200 if count else 503
@@ -98,33 +109,62 @@ def ready(response: Response, db=Depends(get_db)):
 
 
 @app.get("/api/incidents")
-def incidents(q: str = "", severity: str = "", category: str = "", priority: str = "", state: str = "",
-              page: int = 1, operator=Depends(require_operator), db=Depends(get_db)):
+def incidents(
+    q: str = "",
+    severity: str = "",
+    category: str = "",
+    priority: str = "",
+    state: str = "",
+    page: int = 1,
+    operator=Depends(require_operator),
+    db=Depends(get_db),
+):
     if not 1 <= page <= 100000 or len(q) > 500:
         raise HTTPException(422, "Некорректные параметры")
     stmt = select(Incident)
-    for name, value in (("severity", severity), ("category", category), ("priority", priority), ("lifecycle", state)):
+    for name, value in (
+        ("severity", severity),
+        ("category", category),
+        ("priority", priority),
+        ("lifecycle", state),
+    ):
         if value:
             stmt = stmt.where(getattr(Incident, name) == value)
     if q:
         escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        stmt = stmt.where((Incident.title.ilike(f"%{escaped}%", escape="\\")) |
-                          (Incident.host.ilike(f"%{escaped}%", escape="\\")))
+        stmt = stmt.where(
+            (Incident.title.ilike(f"%{escaped}%", escape="\\"))
+            | (Incident.host.ilike(f"%{escaped}%", escape="\\"))
+        )
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))
-    rows = db.scalars(stmt.order_by(Incident.lifecycle, Incident.priority, Incident.last_seen.desc())
-                      .offset((page - 1) * 50).limit(50)).all()
+    rows = db.scalars(
+        stmt.order_by(Incident.lifecycle, Incident.priority, Incident.last_seen.desc())
+        .offset((page - 1) * 50)
+        .limit(50)
+    ).all()
     return {"items": [public(row) for row in rows], "total": total, "page": page}
 
 
 @app.get("/api/summary")
 def summary(operator=Depends(require_operator), db=Depends(get_db)):
-    counts = dict(db.execute(select(Incident.severity, func.count()).where(Incident.lifecycle == "firing")
-                             .group_by(Incident.severity)).all())
-    return {"critical": counts.get("critical", 0), "warning": counts.get("warning", 0),
-            "info": counts.get("info", 0),
-            "pending": db.scalar(select(func.count()).select_from(Incident)
-                                 .where(Incident.lifecycle == "firing", Incident.handling == "new")),
-            "runbooks": db.scalar(select(func.count()).select_from(Runbook).where(Runbook.status == "ready"))}
+    counts = dict(
+        db.execute(
+            select(Incident.severity, func.count())
+            .where(Incident.lifecycle == "firing")
+            .group_by(Incident.severity)
+        ).all()
+    )
+    return {
+        "critical": counts.get("critical", 0),
+        "warning": counts.get("warning", 0),
+        "info": counts.get("info", 0),
+        "pending": db.scalar(
+            select(func.count())
+            .select_from(Incident)
+            .where(Incident.lifecycle == "firing", Incident.handling == "new")
+        ),
+        "runbooks": db.scalar(select(func.count()).select_from(Runbook).where(Runbook.status == "ready")),
+    }
 
 
 @app.get("/api/incidents/{incident_id}")
@@ -156,12 +196,17 @@ def runbooks(q: str = "", operator=Depends(require_operator), db=Depends(get_db)
         if len(q) > 1000:
             raise HTTPException(422, "Запрос слишком длинный")
         from app.knowledge import search_runbooks
+
         try:
             return {"items": search_runbooks(db, q, 20), "semantic": True}
         except Exception as exc:
             raise HTTPException(503, "Модель поиска недоступна. Проверьте состояние базы знаний") from exc
-    return {"items": [public(row) for row in db.scalars(select(Runbook).order_by(Runbook.created_at.desc()).limit(500))],
-            "semantic": False}
+    return {
+        "items": [
+            public(row) for row in db.scalars(select(Runbook).order_by(Runbook.created_at.desc()).limit(500))
+        ],
+        "semantic": False,
+    }
 
 
 @app.post("/api/runbooks", status_code=202)
@@ -182,7 +227,11 @@ def update_runbook(book_id: str, body: RunbookInput, operator=Depends(require_op
     for key, value in body.model_dump().items():
         setattr(book, key, value)
     book.status, book.error, book.revision = "queued", "", book.revision + 1
-    db.execute(update(Incident).where(Incident.lifecycle == "firing").values(recommendation_status="pending", recommendations=[]))
+    db.execute(
+        update(Incident)
+        .where(Incident.lifecycle == "firing")
+        .values(recommendation_status="pending", recommendations=[])
+    )
     db.add(AuditEntry(actor=operator.name, action="runbook_update", comment=book.title))
     db.commit()
     return public(book)
@@ -221,7 +270,9 @@ async def upload(file: UploadFile = File(...), operator=Depends(require_operator
 
 @app.get("/api/jobs")
 def jobs(operator=Depends(require_operator), db=Depends(get_db)):
-    return [public(row) for row in db.scalars(select(ImportJob).order_by(ImportJob.created_at.desc()).limit(30))]
+    return [
+        public(row) for row in db.scalars(select(ImportJob).order_by(ImportJob.created_at.desc()).limit(30))
+    ]
 
 
 @app.get("/api/jobs/{job_id}")
@@ -247,13 +298,18 @@ def retry_job(job_id: str, operator=Depends(require_operator), db=Depends(get_db
 @app.get("/api/sources")
 def sources(operator=Depends(require_operator), db=Depends(get_db)):
     state = db.get(SourceState, "prometheus")
-    return {"source": "Prometheus", "state": public(state) if state else None, "interval_seconds": 15,
-            "demo_mode": settings().demo_mode}
+    return {
+        "source": "Prometheus",
+        "state": public(state) if state else None,
+        "interval_seconds": 15,
+        "demo_mode": settings().demo_mode,
+    }
 
 
 @app.post("/api/sources/sync", status_code=202)
 def sync(operator=Depends(require_operator)):
     from app.tasks import poll
+
     try:
         poll.delay()
     except Exception as exc:
@@ -263,7 +319,10 @@ def sync(operator=Depends(require_operator)):
 
 @app.get("/api/audit")
 def audit(operator=Depends(require_operator), db=Depends(get_db)):
-    return [public(row) for row in db.scalars(select(AuditEntry).order_by(AuditEntry.created_at.desc()).limit(100))]
+    return [
+        public(row)
+        for row in db.scalars(select(AuditEntry).order_by(AuditEntry.created_at.desc()).limit(100))
+    ]
 
 
 class DemoInput(BaseModel):
@@ -275,8 +334,11 @@ def demo(body: DemoInput, operator=Depends(require_operator), db=Depends(get_db)
     if not settings().demo_mode:
         raise HTTPException(404, "Демонстрация отключена")
     import httpx
+
     try:
-        httpx.post(settings().demo_exporter_url + "/scenario", json=body.model_dump(), timeout=5).raise_for_status()
+        httpx.post(
+            settings().demo_exporter_url + "/scenario", json=body.model_dump(), timeout=5
+        ).raise_for_status()
     except httpx.HTTPError as exc:
         raise HTTPException(503, "Демонстрационный источник недоступен") from exc
     db.add(AuditEntry(actor=operator.name, action="demo_scenario", comment=body.scenario))

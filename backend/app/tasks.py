@@ -14,11 +14,20 @@ from app.monitoring import fetch_alerts, ingest_alerts
 
 log = logging.getLogger(__name__)
 celery = Celery("copilot", broker=settings().redis_url, backend=settings().redis_url)
-celery.conf.update(task_serializer="json", result_serializer="json", accept_content=["json"],
-                   task_acks_late=True, task_reject_on_worker_lost=True, worker_prefetch_multiplier=1,
-                   broker_connection_retry_on_startup=True, result_expires=3600,
-                   beat_schedule={"monitoring": {"task": "app.tasks.poll", "schedule": 15.0},
-                                  "maintenance": {"task": "app.tasks.maintenance", "schedule": 8.0}})
+celery.conf.update(
+    task_serializer="json",
+    result_serializer="json",
+    accept_content=["json"],
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    worker_prefetch_multiplier=1,
+    broker_connection_retry_on_startup=True,
+    result_expires=3600,
+    beat_schedule={
+        "monitoring": {"task": "app.tasks.poll", "schedule": 15.0},
+        "maintenance": {"task": "app.tasks.maintenance", "schedule": 8.0},
+    },
+)
 
 
 def process_import(db, job_id: str):
@@ -45,7 +54,9 @@ def process_import(db, job_id: str):
             job.progress, job.updated_at = index + 1, utcnow()
             db.commit()
         job.status = "succeeded"
-        db.execute(update(Incident).where(Incident.lifecycle == "firing").values(recommendation_status="pending"))
+        db.execute(
+            update(Incident).where(Incident.lifecycle == "firing").values(recommendation_status="pending")
+        )
         db.commit()
     except Exception as exc:
         db.rollback()
@@ -69,8 +80,12 @@ def poll():
         try:
             alerts = fetch_alerts()
             # Validate the whole snapshot before mutating lifecycle state.
-            if any(not isinstance(a, dict) or not isinstance(a.get("labels"), dict)
-                   or not isinstance(a.get("annotations", {}), dict) for a in alerts):
+            if any(
+                not isinstance(a, dict)
+                or not isinstance(a.get("labels"), dict)
+                or not isinstance(a.get("annotations", {}), dict)
+                for a in alerts
+            ):
                 raise ValueError("Некорректный снимок событий Prometheus")
             ingest_alerts(db, alerts, "prometheus")
         except Exception:
@@ -94,8 +109,12 @@ def maintenance():
         for job in queued_jobs:
             import_file.delay(job.id)
         stale = utcnow() - timedelta(minutes=15)
-        db.execute(update(ImportJob).where(ImportJob.status == "running", ImportJob.updated_at < stale)
-                   .values(status="queued", error="Повтор после прерывания обработки"))
+        db.execute(
+            update(ImportJob)
+            .where(ImportJob.status == "running", ImportJob.updated_at < stale)
+            .values(status="queued", error="Повтор после прерывания обработки")
+        )
+        db.commit()
         books = db.scalars(select(Runbook).where(Runbook.status == "queued").limit(30)).all()
         for book in books:
             try:
@@ -103,10 +122,15 @@ def maintenance():
             except Exception:
                 db.rollback()
                 book = db.get(Runbook, book.id)
-                book.status, book.error = "failed", "Модель недоступна. Проверьте сеть и повторите индексацию."
+                book.status, book.error = (
+                    "failed",
+                    "Модель недоступна. Проверьте сеть и повторите индексацию.",
+                )
                 db.commit()
                 log.exception("Indexing failed")
-        events = db.scalars(select(Incident).where(Incident.recommendation_status == "pending").limit(50)).all()
+        events = db.scalars(
+            select(Incident).where(Incident.recommendation_status == "pending").limit(50)
+        ).all()
         ready = db.scalar(select(Runbook.id).where(Runbook.status == "ready").limit(1))
         if ready:
             for event in events:

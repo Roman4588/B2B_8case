@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY pyproject.toml /app/pyproject.toml
 COPY datasets/ /app/datasets/
 USER copilot
-CMD ["python", "-m", "pytest", "tests", "-q"]
+CMD ["python", "-m", "pytest", "tests", "-q", "-o", "cache_dir=/tmp/pytest-cache"]

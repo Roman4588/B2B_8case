@@ -3,17 +3,25 @@ import os
 import pytest
 from sqlalchemy import select, text
 
-pytestmark = [pytest.mark.integration, pytest.mark.skipif(not os.environ.get("INTEGRATION"), reason="Needs running stack")]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(not os.environ.get("INTEGRATION"), reason="Needs running stack"),
+]
 
 
 def test_real_pgvector_retrieval_and_reindex():
     from app.db import session_factory
     from app.knowledge import index_runbook, search_runbooks
     from app.models import Chunk, Runbook
+
     with session_factory()() as db:
         assert db.scalar(text("SELECT extversion FROM pg_extension WHERE extname='vector'"))
-        book = Runbook(title="Disk capacity", condition="Disk full. На диске сервера закончилось свободное место",
-                       steps=["Проверить df -h", "Архивировать согласованные логи"], category="server")
+        book = Runbook(
+            title="Disk capacity",
+            condition="Disk full. На диске сервера закончилось свободное место",
+            steps=["Проверить df -h", "Архивировать согласованные логи"],
+            category="server",
+        )
         db.add(book)
         db.commit()
         try:

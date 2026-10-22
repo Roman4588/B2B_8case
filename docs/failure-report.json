@@ -1,0 +1,7 @@
+{
+  "source_failure_preserves_events": true,
+  "source_reconnects": true,
+  "session_survives_restart": true,
+  "manual_state_survives_restart": true,
+  "active_before": 5
+}

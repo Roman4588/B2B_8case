@@ -12,17 +12,29 @@ from sqlalchemy.pool import StaticPool
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     from app.config import settings
+
     monkeypatch.setattr(settings(), "upload_dir", tmp_path)
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     with Session(engine) as db:
         db.add(Operator(name="Инженер", password_hash=hash_password("test-password")))
-        db.add(Incident(id="test-event", source="test", external_id="1", title="Disk full",
-                        severity="critical", category="server", priority="P1"))
+        db.add(
+            Incident(
+                id="test-event",
+                source="test",
+                external_id="1",
+                title="Disk full",
+                severity="critical",
+                category="server",
+                priority="P1",
+            )
+        )
         db.commit()
+
     def override():
         with Session(engine, expire_on_commit=False) as db:
             yield db
+
     app.dependency_overrides[get_db] = override
     with TestClient(app) as test_client:
         yield test_client, engine
@@ -52,7 +64,10 @@ def test_requires_auth_and_records_manual_action(client):
 def test_upload_is_persisted_and_queued_without_processing(client):
     http, engine = client
     login(http)
-    response = http.post("/api/runbooks/import", files={"file": ("../../runbook.txt", "Если заполнен диск → Проверить место".encode())})
+    response = http.post(
+        "/api/runbooks/import",
+        files={"file": ("../../runbook.txt", "Если заполнен диск → Проверить место".encode())},
+    )
     assert response.status_code == 202
     body = response.json()
     with Session(engine) as db:
@@ -66,5 +81,11 @@ def test_rejects_invalid_runbook_and_cross_origin_write(client):
     http, _ = client
     login(http)
     assert http.post("/api/runbooks", json={"title": "x", "condition": "", "steps": []}).status_code == 422
-    assert http.post("/api/incidents/test-event/actions", json={"action": "accept"},
-                     headers={"Origin": "https://attacker.example"}).status_code == 403
+    assert (
+        http.post(
+            "/api/incidents/test-event/actions",
+            json={"action": "accept"},
+            headers={"Origin": "https://attacker.example"},
+        ).status_code
+        == 403
+    )

@@ -3,7 +3,23 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "scripts": {"dev": "vite --host 0.0.0.0", "typecheck": "tsc --noEmit", "build": "npm run typecheck && vite build", "test:e2e": "playwright test"},
-  "dependencies": {"react": "19.3.1", "react-dom": "19.3.1", "lucide-react": "1.61.0"},
-  "devDependencies": {"typescript": "7.0.2", "vite": "8.3.5", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@playwright/test": "1.64.1"}
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && vite build",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "lucide-react": "1.61.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "prettier": "^3.9.10",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
+  }
 }

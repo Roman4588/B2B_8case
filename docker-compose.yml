@@ -6,7 +6,7 @@ x-backend: &backend
     dockerfile: backend/Dockerfile
     target: runtime
   environment: &environment
-    DATABASE_URL: postgresql+psycopg://copilot:${POSTGRES_PASSWORD:-copilot-local}@db:5432/copilot
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-copilot-local}
     REDIS_URL: redis://redis:6379/0
     PROMETHEUS_URL: ${PROMETHEUS_URL:-http://prometheus:9090}
     PROMETHEUS_TOKEN: ${PROMETHEUS_TOKEN:-}

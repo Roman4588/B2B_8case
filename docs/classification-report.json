@@ -78,7 +78,7 @@
     }
   },
   "dataset_sha256": "9ffbe211a13b8ebbc76460d8e73aff58f35b376ba48b1f3426771f4edd85f7e0",
-  "evaluated_at": "2026-10-22T16:25:40.549413+00:00",
+  "evaluated_at": "2026-10-22T17:06:47.853147+00:00",
   "provenance": "Author-created Russian/English monitoring scenarios, separate from training.json.",
   "limitation": "Not an independent organizer benchmark; accuracy on unknown events is unmeasured.",
   "passed": true
