@@ -86,7 +86,7 @@ function Login({ onLogin }: { onLogin: (operator: Operator) => void }) {
             <Command size={25} />
           </span>
           <strong>
-            дежурный<span>AI OPERATIONS COPILOT</span>
+            Сигналис<span>AI OPERATIONS COPILOT</span>
           </strong>
         </div>
         <div>
@@ -112,7 +112,6 @@ function Login({ onLogin }: { onLogin: (operator: Operator) => void }) {
             </span>
           </div>
         </div>
-        <small>Кейс 08 · ИИ-Ассистент Дежурного</small>
       </section>
       <section className="login-form">
         <span className="sparkle-circle">
@@ -148,14 +147,6 @@ function Login({ onLogin }: { onLogin: (operator: Operator) => void }) {
             <ArrowRight size={17} />
           </button>
         </form>
-        <div className="login-hint">
-          <ShieldCheck size={17} />
-          <span>
-            Локальный стенд. Данные остаются в вашей инфраструктуре.
-            <br />
-            Пароль первого запуска указан в README.
-          </span>
-        </div>
       </section>
     </main>
   );
@@ -188,7 +179,7 @@ function Workspace({
             <Command size={23} />
           </span>
           <strong>
-            дежурный<span>AI OPERATIONS COPILOT</span>
+            Сигналис<span>AI OPERATIONS COPILOT</span>
           </strong>
         </a>
         <div className="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
