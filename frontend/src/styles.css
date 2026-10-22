@@ -1487,7 +1487,7 @@ small {
 .login-page {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   background: #fff;
 }
 .login-story {
@@ -1517,25 +1517,32 @@ small {
 .login-story > div:nth-child(2) {
   position: relative;
   z-index: 1;
-  margin: 70px 0;
+  margin: auto 0;
+  padding: 60px 0;
+}
+.login-story .brand strong {
+  font-size: 30px;
+}
+.login-story .brand strong span {
+  font-size: 10px;
 }
 .login-story .eyebrow {
-  font-size: 8px;
+  font-size: 12px;
   color: #83aa96;
   letter-spacing: 1.5px;
 }
 .login-story h1 {
-  font-size: 52px;
+  font-size: clamp(48px, 4vw, 72px);
   line-height: 1.14;
   font-weight: 450;
   letter-spacing: -2px;
   margin: 21px 0 25px;
 }
 .login-story p {
-  font-size: 13px;
+  font-size: 18px;
   line-height: 1.9;
   color: #8fa9ad;
-  max-width: 330px;
+  max-width: 500px;
 }
 .login-points {
   display: flex;
@@ -1548,12 +1555,12 @@ small {
   gap: 11px;
   align-items: center;
   color: #a2c1b4;
-  font-size: 11px;
+  font-size: 16px;
 }
 .login-form {
   align-self: center;
   justify-self: center;
-  width: 340px;
+  width: 480px;
   max-width: 100%;
   padding: 25px;
 }
@@ -1564,13 +1571,13 @@ small {
   margin-bottom: 26px;
 }
 .login-form h2 {
-  font-size: 22px;
+  font-size: 32px;
   font-weight: 550;
   letter-spacing: -0.6px;
   line-height: 1.4;
 }
 .login-form > p {
-  font-size: 11px;
+  font-size: 16px;
   color: #9aa8a2;
   margin: 10px 0 28px;
 }
@@ -1580,15 +1587,15 @@ small {
   gap: 19px;
 }
 .login-form input {
-  padding: 13px 12px;
-  font-size: 12px;
+  padding: 18px 16px;
+  font-size: 16px;
 }
 .login-form .primary {
-  padding: 13px;
-  font-size: 11px;
+  padding: 18px;
+  font-size: 16px;
 }
 .login-form label {
-  font-size: 10px;
+  font-size: 15px;
   color: #70857a;
 }
 @media (min-width: 1550px) {
@@ -2026,7 +2033,7 @@ small {
     font-size: 8px;
   }
   .login-page {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .login-story {
     padding: 28px 30px 25px;
@@ -2034,36 +2041,37 @@ small {
   }
   .login-story > div:nth-child(2) {
     margin: 30px 0 0;
+    padding: 0;
   }
   .login-story h1 {
     font-size: 34px;
     margin: 14px 0;
   }
   .login-story p {
-    font-size: 10px;
-    max-width: 300px;
+    font-size: 15px;
+    max-width: 500px;
   }
   .login-points {
     display: none;
   }
   .login-story .eyebrow {
-    font-size: 7px;
+    font-size: 10px;
   }
   .login-form {
     padding: 32px 25px 40px;
-    width: 360px;
+    width: 480px;
   }
   .login-form .sparkle-circle {
     display: none;
   }
   .login-form h2 {
-    font-size: 22px;
+    font-size: 26px;
   }
   .login-form > p {
-    font-size: 11px;
+    font-size: 15px;
   }
   .login-form label {
-    font-size: 11px;
+    font-size: 15px;
   }
 }
 /* Readable operational copy; compact labels remain secondary. */
