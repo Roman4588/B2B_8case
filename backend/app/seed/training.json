@@ -1,0 +1,13 @@
+{
+  "category": {
+    "database": ["Postgres database connection failure", "MySQL slow SQL query", "MongoDB replica lag", "Redis database memory pressure", "PostgreSQL deadlock transaction", "Отказ базы данных", "Медленные запросы SQL", "Блокировки транзакций СУБД", "Репликация базы отстаёт", "Переполнен пул подключений PostgreSQL", "Database backup completed", "Redis replication health"],
+    "server": ["CPU usage on host", "Server memory utilization", "Disk space filesystem full", "RAM swap on physical server", "Host inode consumption", "Загрузка процессора сервера", "Недостаточно оперативной памяти", "Дисковый раздел заполнен", "Температура сервера", "Проверка диска узла", "Server reboot finished", "Memory allocation on host"],
+    "network": ["Network packet loss", "DNS resolution failed", "Router interface disconnected", "Firewall blocked network traffic", "BGP route VPN tunnel", "Потеря сетевых пакетов", "Маршрутизатор недоступен", "Коммутатор потерял соединение", "Сетевой интерфейс отключён", "Задержка между сегментами сети", "Gateway uplink traffic", "Network configuration completed"],
+    "application": ["Nginx upstream error HTTP 503", "API request duration", "Application deployment finished", "Kubernetes pod crash", "Container restart loop", "Ошибка веб приложения", "Служба Nginx остановлена", "Сервис недоступен по HTTP", "Приложение отвечает медленно", "Истекает сертификат приложения", "HTTP request error", "Application response time"]
+  },
+  "severity": {
+    "critical": ["Critical service failure", "Server is down", "Database unavailable", "Network outage", "Host unreachable", "Application crashed", "Memory exhausted", "Критическая ошибка", "Сервер недоступен", "Аварийный отказ базы", "Отказ маршрутизатора", "Критический сбой системы", "Нет доступа к сервису", "Полная остановка сервиса"],
+    "warning": ["Warning elevated utilization", "Threshold exceeded", "Latency rising", "Disk pressure increasing", "Connections approaching capacity", "Slow response detected", "Предупреждение о нагрузке", "Высокая задержка ответов", "Порог использования превышен", "Заканчивается свободное место", "Рост количества ошибок", "Нехватка ресурсов", "Повышенная загрузка", "Внимание: медленный ответ"],
+    "info": ["Information service restored", "Deployment completed", "Backup succeeded", "Health check finished successfully", "Configuration verified", "Server recovered", "Информация: служба восстановлена", "Операция успешно завершена", "Проверка окончена", "Резервирование завершено", "Изменение конфигурации выполнено", "Система работает штатно", "Обновление установлено успешно", "Плановое событие"]
+  }
+}

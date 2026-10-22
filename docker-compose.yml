@@ -1,0 +1,124 @@
+name: b2b8case
+x-backend: &backend
+  image: b2b8case-backend:local
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+    target: runtime
+  environment: &environment
+    DATABASE_URL: postgresql+psycopg://copilot:${POSTGRES_PASSWORD:-copilot-local}@db:5432/copilot
+    REDIS_URL: redis://redis:6379/0
+    PROMETHEUS_URL: ${PROMETHEUS_URL:-http://prometheus:9090}
+    PROMETHEUS_TOKEN: ${PROMETHEUS_TOKEN:-}
+    OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:-copilot-demo}
+    MODEL_CACHE: /data/models
+    UPLOAD_DIR: /data/uploads
+    DEMO_MODE: ${DEMO_MODE:-true}
+    HF_HUB_DISABLE_TELEMETRY: "1"
+  volumes:
+    - models:/data/models
+    - uploads:/data/uploads
+  restart: unless-stopped
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+services:
+  db:
+    image: pgvector/pgvector:0.8.1-pg17
+    environment:
+      POSTGRES_USER: copilot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-copilot-local}
+      POSTGRES_DB: copilot
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U copilot -d copilot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    logging: *logging
+  redis:
+    image: redis:7.4-alpine
+    command: [redis-server, --appendonly, "yes", --maxmemory, 256mb, --maxmemory-policy, noeviction]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    logging: *logging
+  init:
+    <<: *backend
+    command: [python, -m, app.bootstrap]
+    restart: "no"
+    depends_on:
+      db: {condition: service_healthy}
+  api:
+    <<: *backend
+    depends_on:
+      init: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/live')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  worker:
+    <<: *backend
+    command: [celery, -A, app.tasks.celery, worker, --pool=threads, --concurrency=2, --loglevel=INFO]
+    depends_on:
+      init: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+  beat:
+    <<: *backend
+    command: [celery, -A, app.tasks.celery, beat, --loglevel=INFO, --schedule=/tmp/celerybeat-schedule]
+    depends_on:
+      init: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.retention.time=2d]
+    volumes:
+      - ./deploy/prometheus:/etc/prometheus:ro
+      - prometheus:/prometheus
+    restart: unless-stopped
+    logging: *logging
+  demo-exporter:
+    build: ./deploy/demo-exporter
+    restart: unless-stopped
+    logging: *logging
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:80"
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+    logging: *logging
+  tests:
+    profiles: [test]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: test
+    environment:
+      <<: *environment
+      INTEGRATION: "1"
+    volumes:
+      - models:/data/models
+      - uploads:/data/uploads
+    depends_on:
+      api: {condition: service_healthy}
+volumes:
+  postgres:
+  redis:
+  models:
+  uploads:
+  prometheus:

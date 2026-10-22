@@ -1,0 +1,85 @@
+{
+  "samples": 48,
+  "metrics": {
+    "severity": 1.0,
+    "category": 1.0,
+    "priority": 1.0,
+    "triple_accuracy": 1.0
+  },
+  "confusion_matrices": {
+    "severity": {
+      "critical": {
+        "critical": 16,
+        "info": 0,
+        "warning": 0
+      },
+      "info": {
+        "critical": 0,
+        "info": 13,
+        "warning": 0
+      },
+      "warning": {
+        "critical": 0,
+        "info": 0,
+        "warning": 19
+      }
+    },
+    "category": {
+      "application": {
+        "application": 12,
+        "database": 0,
+        "network": 0,
+        "server": 0
+      },
+      "database": {
+        "application": 0,
+        "database": 12,
+        "network": 0,
+        "server": 0
+      },
+      "network": {
+        "application": 0,
+        "database": 0,
+        "network": 12,
+        "server": 0
+      },
+      "server": {
+        "application": 0,
+        "database": 0,
+        "network": 0,
+        "server": 12
+      }
+    },
+    "priority": {
+      "P1": {
+        "P1": 16,
+        "P2": 0,
+        "P3": 0,
+        "P4": 0
+      },
+      "P2": {
+        "P1": 0,
+        "P2": 5,
+        "P3": 0,
+        "P4": 0
+      },
+      "P3": {
+        "P1": 0,
+        "P2": 0,
+        "P3": 14,
+        "P4": 0
+      },
+      "P4": {
+        "P1": 0,
+        "P2": 0,
+        "P3": 0,
+        "P4": 13
+      }
+    }
+  },
+  "dataset_sha256": "9ffbe211a13b8ebbc76460d8e73aff58f35b376ba48b1f3426771f4edd85f7e0",
+  "evaluated_at": "2026-10-22T16:25:40.549413+00:00",
+  "provenance": "Author-created Russian/English monitoring scenarios, separate from training.json.",
+  "limitation": "Not an independent organizer benchmark; accuracy on unknown events is unmeasured.",
+  "passed": true
+}

@@ -1,0 +1,33 @@
+groups:
+  - name: case8
+    rules:
+      - alert: PostgresDown
+        expr: demo_database_up == 0
+        labels: {severity: critical, category: database, host: db-primary}
+        annotations:
+          summary: "PostgreSQL: основной узел недоступен"
+          description: "Приложение не может подключиться к PostgreSQL. Database primary is down."
+      - alert: DiskSpaceLow
+        expr: demo_disk_used_percent > 85
+        labels: {severity: warning, category: server, host: app-01}
+        annotations:
+          summary: "На диске app-01 заканчивается место"
+          description: "Раздел /var заполнен более чем на 85%. Disk space low."
+      - alert: NetworkPacketLoss
+        expr: demo_packet_loss_percent > 5
+        labels: {severity: warning, category: network, impact: high, host: gateway-01}
+        annotations:
+          summary: "Потери пакетов на сетевом шлюзе"
+          description: "Network packet loss на gateway-01 превышает 5%."
+      - alert: NginxErrors
+        expr: demo_http_error_percent > 10
+        labels: {severity: critical, category: application, host: web-01}
+        annotations:
+          summary: "Nginx: приложение возвращает HTTP 502"
+          description: "Nginx upstream unavailable. Ошибки на пользовательском маршруте."
+      - alert: DailyHealthCheck
+        expr: demo_health_check == 1
+        labels: {severity: info, category: application, host: copilot-demo}
+        annotations:
+          summary: "Плановая проверка приложения завершена"
+          description: "Демонстрационное информационное событие. Health check completed."
