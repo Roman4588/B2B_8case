@@ -1,6 +1,7 @@
 import hashlib
 import time
 from collections import defaultdict, deque
+from datetime import UTC, timedelta
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -8,14 +9,25 @@ from urllib.parse import urlsplit
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select, text, update
+from sqlalchemy import func, select, text
 
 from app.auth import create_session, require_operator, verify_password
 from app.config import settings
 from app.db import get_db
 from app.documents import RunbookInput
-from app.models import AuditEntry, ImportJob, Incident, LoginSession, Operator, Runbook, SourceState, uid
+from app.models import (
+    AuditEntry,
+    ImportJob,
+    Incident,
+    LoginSession,
+    Operator,
+    Runbook,
+    SourceState,
+    uid,
+    utcnow,
+)
 from app.operations import manual_action
+from app.recommendations import invalidate_recommendations
 
 app = FastAPI(
     title="Дежурный · ИИ-ассистент", version="1.0.0", docs_url="/api/docs", openapi_url="/api/openapi.json"
@@ -115,18 +127,22 @@ def incidents(
     category: str = "",
     priority: str = "",
     state: str = "",
+    handling: str = "",
     page: int = 1,
     operator=Depends(require_operator),
     db=Depends(get_db),
 ):
     if not 1 <= page <= 100000 or len(q) > 500:
         raise HTTPException(422, "Некорректные параметры")
+    if handling and handling not in {"new", "accepted", "completed", "dismissed"}:
+        raise HTTPException(422, "Неизвестный статус обработки")
     stmt = select(Incident)
     for name, value in (
         ("severity", severity),
         ("category", category),
         ("priority", priority),
         ("lifecycle", state),
+        ("handling", handling),
     ):
         if value:
             stmt = stmt.where(getattr(Incident, name) == value)
@@ -227,11 +243,7 @@ def update_runbook(book_id: str, body: RunbookInput, operator=Depends(require_op
     for key, value in body.model_dump().items():
         setattr(book, key, value)
     book.status, book.error, book.revision = "queued", "", book.revision + 1
-    db.execute(
-        update(Incident)
-        .where(Incident.lifecycle == "firing")
-        .values(recommendation_status="pending", recommendations=[])
-    )
+    invalidate_recommendations(db)
     db.add(AuditEntry(actor=operator.name, action="runbook_update", comment=book.title))
     db.commit()
     return public(book)
@@ -298,12 +310,38 @@ def retry_job(job_id: str, operator=Depends(require_operator), db=Depends(get_db
 @app.get("/api/sources")
 def sources(operator=Depends(require_operator), db=Depends(get_db)):
     state = db.get(SourceState, "prometheus")
+    status = "waiting"
+    if state:
+        if state.error:
+            status = "error"
+        elif state.last_success:
+            status = (
+                "online"
+                if utcnow() - state.last_success.replace(tzinfo=UTC) < timedelta(seconds=60)
+                else "stale"
+            )
     return {
         "source": "Prometheus",
         "state": public(state) if state else None,
         "interval_seconds": 15,
         "demo_mode": settings().demo_mode,
+        "status": status,
+        "stale_after_seconds": 60,
     }
+
+
+@app.post("/api/incidents/{incident_id}/recommendations/retry", status_code=202)
+def retry_recommendations(incident_id: str, operator=Depends(require_operator), db=Depends(get_db)):
+    item = db.scalar(select(Incident).where(Incident.id == incident_id).with_for_update())
+    if item is None:
+        raise HTTPException(404, "Событие не найдено")
+    if item.lifecycle != "firing":
+        raise HTTPException(409, "Событие уже восстановлено")
+    item.recommendations = []
+    item.recommendation_status = "pending"
+    item.recommendation_generation += 1
+    db.commit()
+    return {"status": "queued"}
 
 
 @app.post("/api/sources/sync", status_code=202)

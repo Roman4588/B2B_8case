@@ -20,7 +20,10 @@ CATEGORY_PATTERNS = {
     "application": r"nginx|http|api\b|applicat|приложен|служб|сервис|deploy|container|kubernetes|\bpod\b|crashloop|certificate",
     "server": r"\bcpu\b|\bram\b|memory|disk|filesystem|inode|server|host|сервер|диск|памят|процессор|температур",
 }
-INFO = r"completed|finished|succeeded|successfully|restored|resolved|восстановлен|заверш[её]н|успешн"
+INFO = r"\b(?:completed|finished|succeeded|successfully|restored|resolved|восстановлен\w*|заверш[её]н\w*|успешн\w*)\b"
+FAILED = r"\b(?:unsuccess\w*|failed|failure|неуспеш\w*)\b|не\s+удал\w*"
+NEGATED_SUCCESS = r"\b(?:not|never|не)\s+(?:(?:been|был[аои]?)\s+)?(?:restored|resolved|completed|finished|восстанов\w*|заверш\w*|успеш\w*)"
+NEGATED_CRITICAL = r"\b(?:not|no|without|не|нет)\s+(?:critical|down|unreachable|unavailable|outage|критич\w*|отказ\w*|авари\w*)\b"
 CRITICAL = (
     r"critical|критич|недоступ|отказ|авари|исчерпан|\bdown\b|unreachable|unavailable|exhaust|crashloop|outage"
 )
@@ -56,17 +59,20 @@ def classify(event: dict) -> dict:
     text = f"{event.get('title', '')} {event.get('description', '')}".lower()
     labels = event.get("labels") or {}
     reasons = []
+    review = False
     category = labels.get("category")
     if category in CATEGORIES:
         category_conf = 1.0
         reasons.append("Категория из метки мониторинга")
     else:
         category, category_conf = predict("category", text)
-        for name, pattern in CATEGORY_PATTERNS.items():
-            if re.search(pattern, text):
-                category, category_conf = name, 0.92
-                reasons.append("Категория: терминология события и текстовая модель")
-                break
+        matches = [name for name, pattern in CATEGORY_PATTERNS.items() if re.search(pattern, text)]
+        if matches:
+            category = matches[0]
+            review = len(matches) > 1
+            reasons.append("Категория по терминологии события (правило, не вероятность)")
+        if len(matches) > 1:
+            reasons.append("Упомянуты разные категории: нужна проверка инженера")
     severity = str(labels.get("severity", "")).lower()
     severity = {
         "disaster": "critical",
@@ -80,11 +86,20 @@ def classify(event: dict) -> dict:
         reasons.append("Тип из severity источника")
     else:
         severity, severity_conf = predict("severity", text)
-        for name, pattern in (("info", INFO), ("critical", CRITICAL), ("warning", WARNING)):
-            if re.search(pattern, text):
-                severity, severity_conf = name, 0.90
-                reasons.append("Тип по формулировке события")
+        failed = bool(re.search(FAILED, text) or re.search(NEGATED_SUCCESS, text))
+        severity_text = re.sub(NEGATED_CRITICAL, "", text)
+        negated_critical = severity_text != text
+        review |= negated_critical
+        for name, pattern in (("critical", CRITICAL), ("warning", WARNING), ("info", INFO)):
+            if re.search(pattern, severity_text):
+                severity = "warning" if name == "info" and failed else name
+                review |= failed or (name != "info" and bool(re.search(INFO, text)))
+                reasons.append("Тип по формулировке события (правило, не вероятность)")
                 break
+        if failed and severity == "info":
+            severity, review = "warning", True
+        if negated_critical and severity == "critical" and not re.search(CRITICAL, severity_text):
+            severity = "warning"
     priority = {"critical": "P1", "warning": "P3", "info": "P4"}[severity]
     if severity == "warning" and labels.get("impact") == "high":
         priority = "P2"
@@ -95,6 +110,6 @@ def classify(event: dict) -> dict:
         category=category,
         priority=priority,
         confidence=confidence,
-        needs_review=confidence < 0.65,
+        needs_review=review or confidence < 0.65,
         rationale=". ".join(reasons),
     )

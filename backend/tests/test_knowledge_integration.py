@@ -34,3 +34,29 @@ def test_real_pgvector_retrieval_and_reindex():
         finally:
             db.delete(book)
             db.commit()
+
+
+def test_long_document_cannot_hide_another_relevant_runbook():
+    from app.db import session_factory
+    from app.knowledge import embed, search_runbooks
+    from app.models import Chunk, Runbook
+
+    query = "На диске сервера закончилось свободное место"
+    vector = embed([query])[0]
+    nearby = vector.copy()
+    nearby[0] += 0.02
+    with session_factory()() as db:
+        long = Runbook(title="Long disk guide", condition=query, steps=["Check disk"], status="ready")
+        short = Runbook(title="Other disk guide", condition=query, steps=["Check logs"], status="ready")
+        db.add_all([long, short])
+        db.commit()
+        try:
+            db.add_all([Chunk(runbook_id=long.id, text=query, embedding=vector) for _ in range(80)])
+            db.add(Chunk(runbook_id=short.id, text=query, embedding=nearby))
+            db.commit()
+            hits = search_runbooks(db, query, 3)
+            assert {long.id, short.id}.issubset({hit["id"] for hit in hits})
+        finally:
+            db.delete(long)
+            db.delete(short)
+            db.commit()

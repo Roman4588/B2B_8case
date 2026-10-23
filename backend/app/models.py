@@ -41,6 +41,7 @@ class Incident(Base):
     recovered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recommendations: Mapped[list] = mapped_column(JSON, default=list)
     recommendation_status: Mapped[str] = mapped_column(String(32), default="pending")
+    recommendation_generation: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class Runbook(Base):

@@ -15,6 +15,13 @@ export async function api<T>(
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      path !== "/auth/login" &&
+      path !== "/auth/me"
+    ) {
+      window.dispatchEvent(new Event("session-expired"));
+    }
     const detail =
       typeof body.detail === "string"
         ? body.detail

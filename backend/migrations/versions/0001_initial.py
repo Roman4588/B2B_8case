@@ -1,7 +1,7 @@
 """Initial schema for the case 8 operator assistant."""
 
 from alembic import op
-from app.models import Base
+from migrations.initial_schema import Base
 
 revision = "0001"
 down_revision = None

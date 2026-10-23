@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { api, useResource } from "./api";
 import type { Source } from "./types";
-import { time } from "./ui";
+import { sourceStatusNames, time } from "./ui";
 
 export function Sources() {
   const { data, error, refresh } = useResource<Source>("/sources");
@@ -63,16 +63,12 @@ export function Sources() {
           <span
             className={
               "connection " +
-              (data?.state?.last_success && !data.state.error
-                ? "online"
-                : "offline")
+              (!error && data?.status === "online" ? "online" : "offline")
             }
           >
-            {data?.state?.error
-              ? "Ошибка подключения"
-              : data?.state?.last_success
-                ? "Подключён"
-                : "Ожидаем синхронизацию"}
+            {error
+              ? "Нет связи с приложением"
+              : sourceStatusNames[data?.status || "waiting"]}
           </span>
         </header>
         <div className="source-facts">
@@ -88,6 +84,13 @@ export function Sources() {
           </span>
         </div>
         {data?.state?.error && <div className="error">{data.state.error}</div>}
+        {data?.status === "stale" && (
+          <div className="error" role="alert">
+            Новые данные не поступают больше минуты. Показанные события могут
+            быть устаревшими. Проверьте подключение и работу фонового
+            обработчика.
+          </div>
+        )}
         <footer>
           <span>
             <CheckCircle2 size={15} />

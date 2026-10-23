@@ -7,5 +7,10 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   reporter: "list",
-  projects: [{ name: "chromium", use: { browserName: "chromium" } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { browserName: "chromium", channel: process.env.PLAYWRIGHT_CHANNEL },
+    },
+  ],
 });

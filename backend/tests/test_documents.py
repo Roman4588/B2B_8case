@@ -30,3 +30,25 @@ def test_rejects_corrupt_pdf_and_unsupported_format():
         extract(b"not a PDF", ".pdf")
     with pytest.raises(ValueError):
         extract(b"shell", ".exe")
+
+
+@pytest.mark.parametrize("extension", [".txt", ".md", ".pdf", ".docx"])
+def test_separate_if_then_rules_without_markdown_headings(extension):
+    records = parse_runbooks(
+        "Если заполнен диск → Проверить место; Согласовать очистку\n"
+        "Если упал Nginx → Проверить upstream\nПроверить логи",
+        extension,
+    )
+    assert len(records) == 2
+    assert records[0]["steps"] == ["Проверить место", "Согласовать очистку"]
+    assert records[1]["condition"] == "упал Nginx"
+    assert records[1]["steps"] == ["Проверить upstream", "Проверить логи"]
+
+
+def test_numbered_english_rules_keep_multiline_actions():
+    records = parse_runbooks(
+        "1. If disk is full then Check df -h\n2. Archive agreed files\n2. If API is down -> Check upstream",
+        ".txt",
+    )
+    assert len(records) == 2
+    assert records[0]["steps"] == ["Check df -h", "Archive agreed files"]

@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import pytest
 from app.models import AuditEntry, Base, Incident
 from app.monitoring import ingest_alerts
@@ -53,3 +55,48 @@ def test_confirmation_records_only_manual_workflow(db):
     assert incident.lifecycle == "firing"
     with pytest.raises(ValueError):
         manual_action(db, incident.id, "accept", "Инженер", "")
+
+
+def test_recurring_outage_keeps_previous_episode_and_audit(db):
+    first = alert()
+    ingest_alerts(db, [first], "prometheus")
+    old = db.scalar(select(Incident))
+    manual_action(db, old.id, "accept", "Инженер", "Первая авария")
+    ingest_alerts(db, [], "prometheus")
+    recovered = old.recovered_at
+    again = alert()
+    again["activeAt"] = "2026-10-22T11:00:00Z"
+    ingest_alerts(db, [again], "prometheus")
+    ingest_alerts(db, [again], "prometheus")
+    rows = db.scalars(select(Incident)).all()
+    assert len(rows) == 2
+    assert old.lifecycle == "resolved"
+    assert old.handling == "accepted"
+    assert old.recovered_at == recovered
+    new = next(row for row in rows if row.id != old.id)
+    assert new.handling == "new" and new.lifecycle == "firing"
+    assert new.first_seen.replace(tzinfo=UTC) == datetime(2026, 10, 22, 11, tzinfo=UTC)
+    assert db.scalar(select(AuditEntry)).incident_id == old.id
+
+
+def test_active_at_change_detects_recurrence_between_polls(db):
+    first = alert()
+    ingest_alerts(db, [first], "prometheus")
+    first["activeAt"] = "2026-10-22T12:00:00Z"
+    ingest_alerts(db, [first], "prometheus")
+    assert len(db.scalars(select(Incident)).all()) == 2
+    assert len(db.scalars(select(Incident).where(Incident.lifecycle == "firing")).all()) == 1
+
+
+def test_changed_event_discards_old_recommendations(db):
+    first = alert()
+    ingest_alerts(db, [first], "prometheus")
+    item = db.scalar(select(Incident))
+    generation = item.recommendation_generation
+    item.recommendations, item.recommendation_status = [{"title": "Old advice"}], "ready"
+    db.commit()
+    first["annotations"]["description"] = "New problem"
+    ingest_alerts(db, [first], "prometheus")
+    assert item.recommendations == []
+    assert item.recommendation_status == "pending"
+    assert item.recommendation_generation > generation

@@ -1,10 +1,11 @@
 from functools import lru_cache
 from threading import Lock
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select
 
 from app.config import settings
-from app.models import Chunk, Incident, Runbook
+from app.models import Chunk, Runbook
+from app.recommendations import invalidate_recommendations
 
 _lock = Lock()
 
@@ -46,7 +47,7 @@ def index_runbook(db, runbook_id: str):
     for part, vector in zip(parts, vectors, strict=True):
         db.add(Chunk(runbook_id=book.id, text=part, embedding=vector))
     book.status, book.error = "ready", ""
-    db.execute(update(Incident).where(Incident.lifecycle == "firing").values(recommendation_status="pending"))
+    invalidate_recommendations(db)
     db.commit()
 
 
@@ -55,12 +56,25 @@ def search_runbooks(db, query: str, limit: int = 3) -> list[dict]:
     if db.bind.dialect.name != "postgresql":
         raise RuntimeError("Семантический поиск требует PostgreSQL с pgvector")
     distance = Chunk.embedding.cosine_distance(vector)
-    rows = db.execute(
-        select(Chunk, Runbook, distance.label("distance"))
+    # Keep the best chunk per document before limiting results. A long document
+    # must not occupy all candidate positions and hide other relevant runbooks.
+    ranked = (
+        select(
+            Chunk.id.label("chunk_id"),
+            distance.label("distance"),
+            func.row_number().over(partition_by=Chunk.runbook_id, order_by=distance).label("rank"),
+        )
         .join(Runbook, Runbook.id == Chunk.runbook_id)
         .where(Runbook.status == "ready")
-        .order_by(distance)
-        .limit(50)
+        .subquery()
+    )
+    rows = db.execute(
+        select(Chunk, Runbook, ranked.c.distance)
+        .join(ranked, ranked.c.chunk_id == Chunk.id)
+        .join(Runbook, Runbook.id == Chunk.runbook_id)
+        .where(ranked.c.rank == 1)
+        .order_by(ranked.c.distance, Runbook.id)
+        .limit(limit)
     ).all()
     hits, seen = [], set()
     for chunk, book, dist in rows:
