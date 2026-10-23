@@ -28,6 +28,8 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
   const [severity, setSeverity] = useState("");
   const [category, setCategory] = useState("");
   const [state, setState] = useState("firing");
+  const [priority, setPriority] = useState("");
+  const [handling, setHandling] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string | null>(null);
   const params = new URLSearchParams({
@@ -35,6 +37,8 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
     severity,
     category,
     state,
+    priority,
+    handling,
     page: String(page),
   });
   const { data, error, refresh } = useResource<{
@@ -43,7 +47,7 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
   }>("/incidents?" + params);
   useEffect(() => {
     setPage(1);
-  }, [q, severity, category, state]);
+  }, [q, severity, category, state, priority, handling]);
   const items = data?.items || [];
   return (
     <>
@@ -82,6 +86,28 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
                 <option value="critical">Критические</option>
                 <option value="warning">Предупреждения</option>
                 <option value="info">Информационные</option>
+              </select>
+              <select
+                aria-label="Приоритет"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+              >
+                <option value="">Все приоритеты</option>
+                {["P1", "P2", "P3", "P4"].map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </select>
+              <select
+                aria-label="Статус обработки"
+                value={handling}
+                onChange={(e) => setHandling(e.target.value)}
+              >
+                <option value="">Вся работа</option>
+                {Object.entries(handlingNames).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
               </select>
               <select
                 aria-label="Категория"
@@ -310,16 +336,21 @@ function Detail({
         <span className="eyebrow">КЛАССИФИКАЦИЯ</span>
         <p>{item.rationale}</p>
         <span className={"confidence " + (item.needs_review ? "low" : "")}>
-          {item.needs_review ? "Нужна ручная проверка" : "Оценка модели"} ·{" "}
-          {Math.round(item.confidence * 100)}%
+          {item.needs_review
+            ? "Нужна ручная проверка"
+            : "Автоматический разбор"}
         </span>
-        <small>Оценка модели не гарантирует правильность решения.</small>
+        <small>Проверьте вывод перед выполнением действий.</small>
       </div>
       <div className="recommendation-heading">
         <h3>
           <Sparkles size={17} /> Рекомендации
         </h3>
-        <span>{item.recommendations.length}</span>
+        <span>
+          {item.recommendation_status === "ready"
+            ? item.recommendations.length
+            : "—"}
+        </span>
       </div>
       {item.recommendation_status === "pending" && (
         <div className="hint">
@@ -334,35 +365,61 @@ function Detail({
             регламент в базу знаний.
           </div>
         )}
-      {item.recommendations.map((rec, index) => (
-        <article className="recommendation" key={rec.id}>
-          <div className="rec-top">
-            <span>
-              {index === 0 ? "ЛУЧШЕЕ СОВПАДЕНИЕ" : "ПОХОЖИЙ РЕГЛАМЕНТ"}
-            </span>
-            <span>{Math.round(rec.similarity * 100)}% сходства</span>
-          </div>
-          <h4>{rec.title}</h4>
-          <ol>
-            {rec.steps.map((step, i) => (
-              <li key={i}>{step}</li>
-            ))}
-          </ol>
-          {rec.cautions && <div className="caution">{rec.cautions}</div>}
-          <footer>
-            <span>
-              Источник: {rec.source} · ред. {rec.revision}
-            </span>
-            <button
-              className="icon-button"
-              aria-label="Скопировать инструкцию"
-              onClick={() => void copy(rec.steps)}
-            >
-              {copied ? <Check size={16} /> : <Copy size={16} />}
-            </button>
-          </footer>
-        </article>
-      ))}
+      {item.recommendation_status === "failed" && (
+        <div className="error" role="alert">
+          Не удалось подобрать инструкции. Проверьте событие вручную или
+          повторите поиск.
+          <button
+            disabled={busy || item.lifecycle !== "firing"}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await api("/incidents/" + id + "/recommendations/retry", {
+                  method: "POST",
+                });
+                refresh();
+              } catch (err) {
+                setMessage((err as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Повторить поиск
+          </button>
+        </div>
+      )}
+      {(item.recommendation_status === "ready" ? item.recommendations : []).map(
+        (rec, index) => (
+          <article className="recommendation" key={rec.id}>
+            <div className="rec-top">
+              <span>
+                {index === 0 ? "ЛУЧШЕЕ СОВПАДЕНИЕ" : "ПОХОЖИЙ РЕГЛАМЕНТ"}
+              </span>
+              <span>{Math.round(rec.similarity * 100)}% сходства</span>
+            </div>
+            <h4>{rec.title}</h4>
+            <ol>
+              {rec.steps.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+            {rec.cautions && <div className="caution">{rec.cautions}</div>}
+            <footer>
+              <span>
+                Источник: {rec.source} · ред. {rec.revision}
+              </span>
+              <button
+                className="icon-button"
+                aria-label="Скопировать инструкцию"
+                onClick={() => void copy(rec.steps)}
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+              </button>
+            </footer>
+          </article>
+        ),
+      )}
       <div className="manual-controls">
         <h3>Решение инженера</h3>
         <p className="current-state">{handlingNames[item.handling]}</p>

@@ -81,12 +81,17 @@ def parse_runbooks(text: str, extension: str, filename: str = "Документ"
             records = data if isinstance(data, list) else [data]
         else:
             records = []
-            for index, block in enumerate(re.split(r"(?m)^#{1,3}\s+", text)):
+            # Each line-start If/Если begins a separate rule, including plain TXT
+            # and text extracted from PDF/DOCX without Markdown headings.
+            blocks = re.split(
+                r"(?im)^#{1,3}\s+|(?=^[ \t]*(?:[-*]|\d+[.)])?[ \t]*(?:Если|If)\s+)", text
+            )
+            for index, block in enumerate(blocks):
                 block = block.strip()
                 if not block:
                     continue
                 match = re.search(
-                    r"(?:Если|If)\s+(.+?)\s*(?:→|->|⇒|\bthen\b)\s*(.+)",
+                    r"\b(?:Если|If)\s+(.+?)\s*(?:→|->|⇒|\bthen\b)\s*(.+)",
                     block,
                     flags=re.IGNORECASE | re.DOTALL,
                 )

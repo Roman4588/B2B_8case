@@ -122,3 +122,16 @@ def test_edit_during_index_publication_cannot_mark_old_vectors_ready(factory):
         row = db.get(Runbook, book_id)
         assert row.revision == 2
         assert row.status == "queued"
+
+
+def test_maintenance_lock_survives_commits_and_is_released(factory):
+    from app.tasks import maintenance_lock
+
+    with factory() as db:
+        with maintenance_lock(db) as acquired:
+            assert acquired
+            db.commit()
+            with factory() as other:
+                assert not other.scalar(text("SELECT pg_try_advisory_xact_lock(8009)"))
+        with factory() as other:
+            assert other.scalar(text("SELECT pg_try_advisory_xact_lock(8009)"))

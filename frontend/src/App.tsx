@@ -19,6 +19,7 @@ import { Incidents } from "./Incidents";
 import { Knowledge } from "./Knowledge";
 import { Sources } from "./Sources";
 import { Audit } from "./Audit";
+import { sourceStatusNames } from "./ui";
 import type { Source, Summary } from "./types";
 import { time } from "./ui";
 
@@ -33,6 +34,11 @@ const pages = [
 export default function App() {
   const [operator, setOperator] = useState<Operator | null>(null);
   const [checking, setChecking] = useState(true);
+  useEffect(() => {
+    const expired = () => setOperator(null);
+    window.addEventListener("session-expired", expired);
+    return () => window.removeEventListener("session-expired", expired);
+  }, []);
   useEffect(() => {
     void api<Operator>("/auth/me")
       .then(setOperator)
@@ -163,7 +169,7 @@ function Workspace({
   const [help, setHelp] = useState(false);
   const summary = useResource<Summary>("/summary");
   const source = useResource<Source>("/sources");
-  const online = !!source.data?.state?.last_success && !source.data.state.error;
+  const online = !source.error && source.data?.status === "online";
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -236,7 +242,9 @@ function Workspace({
           <div>
             <span className={"connection " + (online ? "online" : "offline")}>
               <i />
-              {online ? "Мониторинг подключён" : "Проверяем мониторинг"}
+              {source.error
+                ? "Нет связи с приложением"
+                : sourceStatusNames[source.data?.status || "waiting"]}
             </span>
             <span className="today">
               {new Date().toLocaleDateString("ru-RU", {

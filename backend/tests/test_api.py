@@ -89,3 +89,35 @@ def test_rejects_invalid_runbook_and_cross_origin_write(client):
         ).status_code
         == 403
     )
+
+
+def test_source_status_expires_when_background_polling_stops(client):
+    from datetime import timedelta
+
+    from app.models import SourceState, utcnow
+
+    http, engine = client
+    login(http)
+    with Session(engine) as db:
+        state = SourceState(id="prometheus", last_success=utcnow())
+        db.add(state)
+        db.commit()
+    assert http.get("/api/sources").json()["status"] == "online"
+    with Session(engine) as db:
+        db.get(SourceState, "prometheus").last_success = utcnow() - timedelta(minutes=2)
+        db.commit()
+    assert http.get("/api/sources").json()["status"] == "stale"
+    with Session(engine) as db:
+        db.get(SourceState, "prometheus").error = "Unavailable"
+        db.commit()
+    assert http.get("/api/sources").json()["status"] == "error"
+
+
+def test_handling_filter_and_recommendation_retry(client):
+    http, _ = client
+    login(http)
+    assert http.get("/api/incidents?handling=new&priority=P1").json()["total"] == 1
+    assert http.get("/api/incidents?handling=accepted").json()["total"] == 0
+    assert http.get("/api/incidents?handling=invalid").status_code == 422
+    assert http.post("/api/incidents/test-event/recommendations/retry").status_code == 202
+    assert http.post("/api/incidents/missing/recommendations/retry").status_code == 404

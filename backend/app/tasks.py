@@ -1,4 +1,5 @@
 import logging
+from contextlib import contextmanager
 from datetime import timedelta
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from app.documents import extract, parse_runbooks
 from app.knowledge import index_runbook, search_runbooks
 from app.models import ImportJob, Incident, Runbook, SourceState, utcnow
 from app.monitoring import fetch_alerts, ingest_alerts
+from app.recommendations import has_ready_runbooks, invalidate_recommendations, refresh_recommendations
 
 log = logging.getLogger(__name__)
 celery = Celery("copilot", broker=settings().redis_url, backend=settings().redis_url)
@@ -54,9 +56,7 @@ def process_import(db, job_id: str):
             job.progress, job.updated_at = index + 1, utcnow()
             db.commit()
         job.status = "succeeded"
-        db.execute(
-            update(Incident).where(Incident.lifecycle == "firing").values(recommendation_status="pending")
-        )
+        invalidate_recommendations(db)
         db.commit()
     except Exception as exc:
         db.rollback()
@@ -100,10 +100,23 @@ def poll():
             log.exception("Prometheus sync failed")
 
 
+@contextmanager
+def maintenance_lock(db):
+    # A dedicated connection owns a session lock, so commits during processing
+    # do not let the next beat task start a second maintenance pass.
+    with db.get_bind().connect() as connection:
+        acquired = connection.scalar(text("SELECT pg_try_advisory_lock(8009)"))
+        try:
+            yield acquired
+        finally:
+            if acquired:
+                connection.execute(text("SELECT pg_advisory_unlock(8009)"))
+
+
 @celery.task(name="app.tasks.maintenance")
 def maintenance():
-    with session_factory()() as db:
-        if not db.scalar(text("SELECT pg_try_advisory_xact_lock(8009)")):
+    with session_factory()() as db, maintenance_lock(db) as acquired:
+        if not acquired:
             return
         queued_jobs = db.scalars(select(ImportJob).where(ImportJob.status == "queued").limit(10)).all()
         for job in queued_jobs:
@@ -129,16 +142,10 @@ def maintenance():
                 db.commit()
                 log.exception("Indexing failed")
         events = db.scalars(
-            select(Incident).where(Incident.recommendation_status == "pending").limit(50)
+            select(Incident.id)
+            .where(Incident.recommendation_status == "pending", Incident.lifecycle == "firing")
+            .limit(50)
         ).all()
-        ready = db.scalar(select(Runbook.id).where(Runbook.status == "ready").limit(1))
-        if ready:
-            for event in events:
-                try:
-                    event.recommendations = search_runbooks(db, f"{event.title}. {event.description}")
-                    event.recommendation_status = "ready"
-                    db.commit()
-                except Exception:
-                    db.rollback()
-                    log.exception("Recommendation search failed")
-                    break
+        if has_ready_runbooks(db):
+            for incident_id in events:
+                refresh_recommendations(db, incident_id, search_runbooks)

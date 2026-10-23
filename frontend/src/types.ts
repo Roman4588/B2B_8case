@@ -54,6 +54,8 @@ export interface Job {
   error: string;
 }
 export interface Source {
+  status: "waiting" | "online" | "stale" | "error";
+  stale_after_seconds: number;
   source: string;
   state: null | {
     last_success: string | null;

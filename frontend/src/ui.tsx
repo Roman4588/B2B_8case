@@ -41,6 +41,12 @@ export const jobNames: Record<string, string> = {
   failed: "Ошибка",
   ready: "Готово",
 };
+export const sourceStatusNames = {
+  waiting: "Ожидаем синхронизацию",
+  online: "Мониторинг подключён",
+  stale: "Данные мониторинга устарели",
+  error: "Ошибка подключения",
+};
 export function time(value?: string | null) {
   return value
     ? new Date(value).toLocaleString("ru-RU", {
