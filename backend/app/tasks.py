@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from contextlib import contextmanager
 from datetime import timedelta
@@ -33,6 +34,12 @@ celery.conf.update(
 
 
 def process_import(db, job_id: str):
+    with import_lock(db, job_id) as acquired:
+        if acquired:
+            _process_import(db, job_id)
+
+
+def _process_import(db, job_id: str):
     job = db.scalar(select(ImportJob).where(ImportJob.id == job_id).with_for_update())
     if job is None or job.status in {"succeeded", "running"}:
         return
@@ -101,16 +108,25 @@ def poll():
 
 
 @contextmanager
-def maintenance_lock(db):
+def advisory_lock(db, key):
     # A dedicated connection owns a session lock, so commits during processing
     # do not let the next beat task start a second maintenance pass.
     with db.get_bind().connect() as connection:
-        acquired = connection.scalar(text("SELECT pg_try_advisory_lock(8009)"))
+        acquired = connection.scalar(text("SELECT pg_try_advisory_lock(:key)"), {"key": key})
         try:
             yield acquired
         finally:
             if acquired:
-                connection.execute(text("SELECT pg_advisory_unlock(8009)"))
+                connection.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": key})
+
+
+def maintenance_lock(db):
+    return advisory_lock(db, 8009)
+
+
+def import_lock(db, job_id):
+    key = int.from_bytes(hashlib.sha256(f"import:{job_id}".encode()).digest()[:8], signed=True)
+    return advisory_lock(db, key)
 
 
 @celery.task(name="app.tasks.maintenance")
@@ -122,11 +138,24 @@ def maintenance():
         for job in queued_jobs:
             import_file.delay(job.id)
         stale = utcnow() - timedelta(minutes=15)
-        db.execute(
-            update(ImportJob)
-            .where(ImportJob.status == "running", ImportJob.updated_at < stale)
-            .values(status="queued", error="Повтор после прерывания обработки")
-        )
+        stale_ids = db.scalars(
+            select(ImportJob.id).where(ImportJob.status == "running", ImportJob.updated_at < stale)
+        ).all()
+        for job_id in stale_ids:
+            # Elapsed time alone cannot prove worker death. The same session lock
+            # is held through extraction/indexing and released on worker disconnect.
+            with import_lock(db, job_id) as available:
+                if available:
+                    db.execute(
+                        update(ImportJob)
+                        .where(
+                            ImportJob.id == job_id,
+                            ImportJob.status == "running",
+                            ImportJob.updated_at < stale,
+                        )
+                        .values(status="queued", error="Повтор после прерывания обработки")
+                    )
+                    db.commit()
         db.commit()
         books = db.scalars(select(Runbook).where(Runbook.status == "queued").limit(30)).all()
         for book in books:

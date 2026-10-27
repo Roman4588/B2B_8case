@@ -135,3 +135,107 @@ def test_maintenance_lock_survives_commits_and_is_released(factory):
                 assert not other.scalar(text("SELECT pg_try_advisory_xact_lock(8009)"))
         with factory() as other:
             assert other.scalar(text("SELECT pg_try_advisory_xact_lock(8009)"))
+
+
+def test_slow_live_import_is_not_reclaimed_or_processed_twice(factory, monkeypatch, tmp_path):
+    from app import tasks
+    from app.models import ImportJob, Runbook, utcnow
+
+    path = tmp_path / "slow.txt"
+    path.write_text("If disk full -> Check disk space", encoding="utf-8")
+    with factory() as db:
+        job = ImportJob(filename=path.name, path=str(path))
+        db.add(job)
+        db.commit()
+        job_id = job.id
+    monkeypatch.setattr(tasks, "session_factory", lambda: factory)
+    monkeypatch.setattr(tasks.import_file, "delay", lambda job_id: None)
+    calls = []
+
+    def slow_extract(content, extension):
+        calls.append(1)
+        if len(calls) == 1:
+            with factory() as other:
+                other.get(ImportJob, job_id).updated_at = utcnow() - timedelta(minutes=16)
+                other.commit()
+            tasks.maintenance.run()
+            with factory() as other:
+                tasks.process_import(other, job_id)
+            assert len(calls) == 1, "The live import was started a second time"
+        return content.decode()
+
+    def index_without_model(db, book_id):
+        db.get(Runbook, book_id).status = "ready"
+        db.commit()
+
+    monkeypatch.setattr(tasks, "extract", slow_extract)
+    monkeypatch.setattr(tasks, "index_runbook", index_without_model)
+    with factory() as db:
+        tasks.process_import(db, job_id)
+    with factory() as db:
+        assert db.get(ImportJob, job_id).status == "succeeded"
+        assert len(calls) == 1
+        assert len(db.scalars(select(Runbook)).all()) == 1
+
+
+@pytest.mark.parametrize("concurrent_change", ["publish", "invalidate"])
+def test_poll_invalidates_concurrent_recommendations_in_postgres(factory, monkeypatch, concurrent_change):
+    from app import monitoring
+    from app.models import Incident
+    from app.recommendations import invalidate_recommendations, refresh_recommendations
+
+    alert = {
+        "state": "firing",
+        "labels": {"alertname": "HostFailure"},
+        "annotations": {"summary": "Disk full"},
+    }
+    with factory() as db:
+        incident_id = monitoring.ingest_alerts(db, [alert], "prometheus")[0]
+        original = monitoring.classify
+        generations = []
+
+        def interleave(value):
+            with factory() as other:
+                if concurrent_change == "publish":
+                    refresh_recommendations(other, incident_id, lambda session, query: [{"title": query}])
+                else:
+                    invalidate_recommendations(other)
+                    other.commit()
+                generations.append(other.get(Incident, incident_id).recommendation_generation)
+            return original(value)
+
+        monkeypatch.setattr(monitoring, "classify", interleave)
+        alert["annotations"]["summary"] = "Network unreachable"
+        monitoring.ingest_alerts(db, [alert], "prometheus")
+    with factory() as check:
+        item = check.get(Incident, incident_id)
+        assert item.recommendation_status == "pending" and item.recommendations == []
+        assert item.recommendation_generation > generations[0]
+
+
+def test_postgres_upgrade_preserves_existing_decisions(factory):
+    import importlib
+
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+    from app.models import AuditEntry, Incident
+
+    with factory() as db:
+        incident = Incident(
+            id="legacy", source="test", external_id="legacy", title="Old incident", handling="accepted"
+        )
+        db.add(incident)
+        db.add(AuditEntry(actor="Engineer", action="accept", incident_id="legacy", comment="Old decision"))
+        db.commit()
+        engine = db.get_bind()
+    with engine.begin() as connection:
+        # Reproduce the populated schema before recommendation generations existed.
+        connection.execute(text("ALTER TABLE incidents DROP COLUMN recommendation_generation"))
+        migration = importlib.import_module("migrations.versions.0002_recommendation_generation")
+        with Operations.context(MigrationContext.configure(connection)):
+            migration.upgrade()
+    with factory() as db:
+        item = db.get(Incident, "legacy")
+        assert item.handling == "accepted" and item.recommendation_generation == 0
+        decision = db.scalar(select(AuditEntry).where(AuditEntry.incident_id == "legacy"))
+        assert decision.comment == "Old decision" and decision.actor == "Engineer"

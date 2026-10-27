@@ -1,0 +1,13 @@
+{
+  "base_url": "http://localhost:8080",
+  "checks": {
+    "login": true,
+    "real_alert_and_recommendations": true,
+    "manual_confirmation_and_idempotence": true,
+    "sixty_page_pdf_background_import": true,
+    "logout": true
+  },
+  "pdf_upload_response_seconds": 0.14,
+  "pdf_processing_seconds": 22.375,
+  "import_job_id": "dcaf0406-7f1f-4b86-8363-8adf483ac571"
+}

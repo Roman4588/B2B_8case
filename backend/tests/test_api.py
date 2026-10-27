@@ -121,3 +121,22 @@ def test_handling_filter_and_recommendation_retry(client):
     assert http.get("/api/incidents?handling=invalid").status_code == 422
     assert http.post("/api/incidents/test-event/recommendations/retry").status_code == 202
     assert http.post("/api/incidents/missing/recommendations/retry").status_code == 404
+
+
+def test_incident_history_is_authenticated_and_isolated(client):
+    from app.models import AuditEntry
+
+    http, engine = client
+    assert http.get("/api/incidents/test-event/history").status_code == 401
+    login(http)
+    with Session(engine) as db:
+        db.add(Incident(id="other", source="test", external_id="2", title="Another episode"))
+        db.add(AuditEntry(actor="Other", action="accept", incident_id="other", comment="Other episode"))
+        db.commit()
+    http.post("/api/incidents/test-event/actions", json={"action": "accept", "comment": "Checked host"})
+    http.post("/api/incidents/test-event/actions", json={"action": "complete", "comment": "Done manually"})
+    rows = http.get("/api/incidents/test-event/history").json()
+    assert [row["action"] for row in rows] == ["accept", "complete"]
+    assert [row["comment"] for row in rows] == ["Checked host", "Done manually"]
+    assert all(row["incident_id"] == "test-event" for row in rows)
+    assert http.get("/api/incidents/missing/history").status_code == 404

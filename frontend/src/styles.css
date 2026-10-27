@@ -1478,6 +1478,41 @@ small {
   color: #b1beb5;
   font-size: 12px;
 }
+.incident-history {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid #dce5e0;
+  border-radius: 12px;
+  background: #f8faf9;
+  overflow-wrap: anywhere;
+}
+.incident-history h3 {
+  font-size: 16px;
+}
+.incident-history p,
+.incident-history li > span {
+  display: block;
+  margin: 8px 0;
+  color: #52685d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.incident-history ol {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.incident-history li {
+  border-left: 3px solid #7aab98;
+  padding: 0 0 0 14px;
+  margin-top: 18px;
+  font-size: 14px;
+}
+.incident-history blockquote {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
 .audit-mark {
   margin-left: auto;
   align-self: flex-start;

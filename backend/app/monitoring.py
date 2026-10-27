@@ -3,7 +3,7 @@ import json
 from datetime import UTC, datetime
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.classifier import classify
 from app.config import settings
@@ -78,10 +78,20 @@ def ingest_alerts(db, alerts: list[dict], source: str) -> list[str]:
         if modified:
             for field, value in classify(dict(title=title, description=description, labels=labels)).items():
                 setattr(item, field, value)
-            item.recommendation_status = "pending"
-            item.recommendations = []
-            item.recommendation_generation += 1
             db.flush()
+            # Another transaction may have published or invalidated recommendations
+            # since this poll read the row. Always clear them and increment in SQL.
+            db.execute(
+                update(Incident)
+                .where(Incident.id == item.id)
+                .values(
+                    recommendation_status="pending",
+                    recommendations=[],
+                    recommendation_generation=Incident.recommendation_generation + 1,
+                )
+                .execution_options(synchronize_session=False)
+            )
+            db.refresh(item)
             changed.append(item.id)
         active.add(item.id)
     for item in db.scalars(select(Incident).where(Incident.source == source, Incident.lifecycle == "firing")):

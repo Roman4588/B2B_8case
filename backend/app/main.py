@@ -191,6 +191,19 @@ def incident_detail(incident_id: str, operator=Depends(require_operator), db=Dep
     return public(item)
 
 
+@app.get("/api/incidents/{incident_id}/history")
+def incident_history(incident_id: str, operator=Depends(require_operator), db=Depends(get_db)):
+    if db.get(Incident, incident_id) is None:
+        raise HTTPException(404, "Событие не найдено")
+    rows = db.scalars(
+        select(AuditEntry)
+        .where(AuditEntry.incident_id == incident_id)
+        .order_by(AuditEntry.created_at, AuditEntry.id)
+        .limit(100)
+    )
+    return [public(row) for row in rows]
+
+
 class ActionInput(BaseModel):
     action: Literal["accept", "complete", "dismiss"]
     comment: str = Field(default="", max_length=2000)

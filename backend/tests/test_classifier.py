@@ -61,6 +61,9 @@ def test_success_of_another_operation_does_not_hide_outage(title):
         "PostgreSQL backup completed unsuccessfully",
         "Nginx was not restored",
         "Резервное копирование завершено неуспешно",
+        "PostgreSQL has never been successfully restored",
+        "Backup has not successfully completed",
+        "PostgreSQL backup has not succeeded",
     ],
 )
 def test_failed_or_negated_success_is_not_informational(title):

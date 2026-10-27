@@ -22,7 +22,11 @@ CATEGORY_PATTERNS = {
 }
 INFO = r"\b(?:completed|finished|succeeded|successfully|restored|resolved|восстановлен\w*|заверш[её]н\w*|успешн\w*)\b"
 FAILED = r"\b(?:unsuccess\w*|failed|failure|неуспеш\w*)\b|не\s+удал\w*"
-NEGATED_SUCCESS = r"\b(?:not|never|не)\s+(?:(?:been|был[аои]?)\s+)?(?:restored|resolved|completed|finished|восстанов\w*|заверш\w*|успеш\w*)"
+NEGATED_SUCCESS = (
+    r"\b(?:not|never|не)\s+(?:(?:been|был[аои]?)\s+)?"
+    r"(?:(?:successfully|успешно)\s+)?"
+    r"(?:restored|resolved|completed|finished|succeeded|succeed|восстанов\w*|заверш\w*|успеш\w*)"
+)
 NEGATED_CRITICAL = r"\b(?:not|no|without|не|нет)\s+(?:critical|down|unreachable|unavailable|outage|критич\w*|отказ\w*|авари\w*)\b"
 CRITICAL = (
     r"critical|критич|недоступ|отказ|авари|исчерпан|\bdown\b|unreachable|unavailable|exhaust|crashloop|outage"

@@ -38,6 +38,9 @@ test("engineer inspects real alert and accepts manual action", async ({
   await expect(page.locator(".current-state")).toContainText(
     /Принято инженером|Выполнено вручную/,
   );
+  await expect(
+    page.getByRole("region", { name: "История решений" }),
+  ).toContainText("Принято к ручному выполнению");
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Журнал действий" })
@@ -50,14 +53,13 @@ test("engineer inspects real alert and accepts manual action", async ({
 test("knowledge form creates instruction and semantic search finds it", async ({
   page,
 }) => {
+  const title = `E2E: контроль свободного места ${Date.now()}`;
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "База знаний" })
     .click();
   await page.getByRole("button", { name: "Добавить инструкцию" }).click();
-  await page
-    .getByLabel("Название", { exact: true })
-    .fill("E2E: контроль свободного места");
+  await page.getByLabel("Название", { exact: true }).fill(title);
   await page
     .getByLabel("Если: описание события")
     .fill("На диске сервера закончилось свободное место, disk space full");
@@ -65,14 +67,9 @@ test("knowledge form creates instruction and semantic search finds it", async ({
     .getByLabel("Действия: каждый шаг с новой строки")
     .fill("Проверить df -h\nСогласовать архивирование логов");
   await page.getByRole("button", { name: "Сохранить и индексировать" }).click();
+  await expect(page.locator(".book").filter({ hasText: title })).toBeVisible();
   await expect(
-    page.locator(".book").filter({ hasText: "E2E: контроль свободного места" }),
-  ).toBeVisible();
-  await expect(
-    page
-      .locator(".book")
-      .filter({ hasText: "E2E: контроль свободного места" })
-      .locator(".job-status"),
+    page.locator(".book").filter({ hasText: title }).locator(".job-status"),
   ).toHaveText("Готово", { timeout: 45000 });
   await page
     .getByLabel("Поиск регламентов")

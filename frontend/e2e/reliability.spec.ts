@@ -4,7 +4,11 @@ test.use({ screenshot: { mode: "on", fullPage: true } });
 
 // UI regressions use deterministic API responses. operator.spec.ts exercises
 // the real Compose stack; these tests also run against the Vite preview.
-async function mockWorkspace(page: Page, status = "pending") {
+async function mockWorkspace(
+  page: Page,
+  status = "pending",
+  sourceStatus = "stale",
+) {
   let recommendationStatus = status;
   const incident = {
     id: "event",
@@ -33,7 +37,7 @@ async function mockWorkspace(page: Page, status = "pending") {
     else if (url.pathname === "/api/sources")
       body = {
         source: "Prometheus",
-        status: "stale",
+        status: sourceStatus,
         interval_seconds: 15,
         stale_after_seconds: 60,
         demo_mode: false,
@@ -72,6 +76,17 @@ async function mockWorkspace(page: Page, status = "pending") {
     else if (url.pathname === "/api/runbooks")
       body = { items: [], semantic: false };
     else if (url.pathname === "/api/jobs") body = [];
+    else if (url.pathname === "/api/incidents/event/history")
+      body = [
+        {
+          id: "decision",
+          incident_id: "event",
+          actor: "Инженер",
+          action: "accept",
+          comment: "Проверил первичный узел",
+          created_at: new Date().toISOString(),
+        },
+      ];
     await route.fulfill({ json: body });
   });
   await page.goto("/");
@@ -91,6 +106,45 @@ test("pending recommendations never display advice from an older event", async (
     "Нужна ручная проверка",
   );
   await expect(page.locator(".confidence")).not.toContainText("90%");
+});
+
+test("incident card shows decisions for its episode", async ({ page }) => {
+  await mockWorkspace(page, "ready");
+  await page.locator(".event-row").click();
+  await expect(
+    page.getByRole("region", { name: "История решений" }),
+  ).toContainText("Проверил первичный узел");
+  await expect(
+    page.getByRole("region", { name: "История решений" }),
+  ).toContainText("Принято к ручному выполнению");
+});
+
+test("stalled polling stops showing a green connection and can recover", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await mockWorkspace(page, "ready", "online");
+  await expect(page.locator(".topbar .connection")).toHaveClass(/online/);
+  await page.route("**/api/sources", () => new Promise(() => {}));
+  const request = page.waitForRequest("**/api/sources");
+  await page.clock.runFor(5000);
+  await request;
+  await page.clock.fastForward(31000);
+  await expect(page.locator(".topbar .connection")).not.toHaveClass(/online/);
+  await page.unroute("**/api/sources");
+  await page.clock.runFor(5000);
+  await expect(page.locator(".topbar .connection")).toHaveClass(/online/);
+});
+
+test("expired session returns the operator to login", async ({ page }) => {
+  await page.clock.install();
+  await mockWorkspace(page);
+  await page.route("**/api/summary", (route) =>
+    route.fulfill({ status: 401, json: { detail: "Войдите в систему" } }),
+  );
+  await page.clock.runFor(5000);
+  await expect(page.getByLabel("Пароль", { exact: true })).toBeVisible();
+  await expect(page.locator(".app-shell")).toHaveCount(0);
 });
 
 test("failed recommendation search can be retried", async ({ page }) => {

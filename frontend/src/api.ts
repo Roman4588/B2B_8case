@@ -4,6 +4,26 @@ export async function api<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const controller = new AbortController();
+  const abort = () => controller.abort(options.signal?.reason);
+  if (options.signal?.aborted) abort();
+  else options.signal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    return await request<T>(path, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted && !options.signal?.aborted)
+      throw new Error(
+        "Сервер долго не отвечает. Проверьте подключение и повторите попытку.",
+      );
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener("abort", abort);
+  }
+}
+
+async function request<T>(path: string, options: RequestInit): Promise<T> {
   const headers: Record<string, string> =
     options.body instanceof FormData
       ? {}
@@ -14,6 +34,7 @@ export async function api<T>(
     headers: { ...headers, ...options.headers },
   });
   const body = await response.json().catch(() => ({}));
+  if (options.signal?.aborted) throw options.signal.reason;
   if (!response.ok) {
     if (
       response.status === 401 &&

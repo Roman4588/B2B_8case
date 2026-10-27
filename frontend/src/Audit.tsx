@@ -1,16 +1,7 @@
 import { ClipboardCheck } from "lucide-react";
 import { useResource } from "./api";
 import type { Audit as AuditEntry } from "./types";
-import { Empty, time } from "./ui";
-const names: Record<string, string> = {
-  accept: "Принято к ручному выполнению",
-  complete: "Выполнено вручную",
-  dismiss: "Рекомендация отклонена",
-  runbook_create: "Добавлена инструкция",
-  runbook_update: "Обновлена инструкция",
-  document_upload: "Загружен документ",
-  demo_scenario: "Изменён учебный сценарий",
-};
+import { actionNames, Empty, time } from "./ui";
 export function Audit() {
   const { data, error } = useResource<AuditEntry[]>("/audit");
   return (
@@ -36,7 +27,7 @@ export function Audit() {
               <ClipboardCheck size={19} />
             </span>
             <div>
-              <h3>{names[row.action] || row.action}</h3>
+              <h3>{actionNames[row.action] || row.action}</h3>
               <p>
                 {row.actor}
                 <span> · {time(row.created_at)}</span>

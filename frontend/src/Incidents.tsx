@@ -12,8 +12,9 @@ import {
   X,
 } from "lucide-react";
 import { api, useResource } from "./api";
-import type { Incident } from "./types";
+import type { Audit, Incident } from "./types";
 import {
+  actionNames,
   categoryIcons,
   categoryNames,
   Empty,
@@ -211,6 +212,7 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
         <aside className={"detail-panel " + (selected ? "has-selection" : "")}>
           {selected ? (
             <Detail
+              key={selected}
               id={selected}
               onClose={() => setSelected(null)}
               onChanged={() => {
@@ -259,6 +261,7 @@ function Detail({
     error,
     refresh,
   } = useResource<Incident>("/incidents/" + id);
+  const history = useResource<Audit[]>("/incidents/" + id + "/history");
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -276,6 +279,7 @@ function Detail({
         body: JSON.stringify({ action: name, comment }),
       });
       refresh();
+      history.refresh();
       onChanged();
       setMessage("Решение записано. Инфраструктурные команды не запускались.");
     } catch (err) {
@@ -470,6 +474,30 @@ function Detail({
         )}
         <SafetyNote />
       </div>
+      <section className="incident-history" aria-label="История решений">
+        <h3>История решений</h3>
+        <p>Действия инженера по этому эпизоду аварии</p>
+        {history.error && (
+          <div className="error" role="alert">
+            {history.error}
+          </div>
+        )}
+        {!history.data && !history.error && (
+          <p role="status">Загружаем историю…</p>
+        )}
+        {history.data?.length === 0 && <p>Решений пока нет.</p>}
+        <ol>
+          {history.data?.map((entry) => (
+            <li key={entry.id}>
+              <strong>{actionNames[entry.action] || entry.action}</strong>
+              <span>
+                {entry.actor} · {time(entry.created_at)}
+              </span>
+              {entry.comment && <blockquote>{entry.comment}</blockquote>}
+            </li>
+          ))}
+        </ol>
+      </section>
       <button className="back-link" onClick={onClose}>
         <ArrowLeft size={14} /> К списку событий <ArrowUpRight size={13} />
       </button>

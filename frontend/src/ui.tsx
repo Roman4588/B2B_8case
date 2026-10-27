@@ -34,6 +34,15 @@ export const handlingNames: Record<string, string> = {
   completed: "Выполнено вручную",
   dismissed: "Отклонено",
 };
+export const actionNames: Record<string, string> = {
+  accept: "Принято к ручному выполнению",
+  complete: "Выполнено вручную",
+  dismiss: "Рекомендация отклонена",
+  runbook_create: "Добавлена инструкция",
+  runbook_update: "Обновлена инструкция",
+  document_upload: "Загружен документ",
+  demo_scenario: "Изменён учебный сценарий",
+};
 export const jobNames: Record<string, string> = {
   queued: "В очереди",
   running: "Обработка",

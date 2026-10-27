@@ -100,3 +100,34 @@ def test_changed_event_discards_old_recommendations(db):
     assert item.recommendations == []
     assert item.recommendation_status == "pending"
     assert item.recommendation_generation > generation
+
+
+@pytest.mark.parametrize("concurrent_change", ["publish", "invalidate"])
+def test_changed_event_invalidates_concurrent_search(db, monkeypatch, concurrent_change):
+    from app import monitoring
+    from app.recommendations import invalidate_recommendations, refresh_recommendations
+
+    first = alert()
+    ingest_alerts(db, [first], "prometheus")
+    incident_id = db.scalar(select(Incident.id))
+    original = monitoring.classify
+    generations = []
+
+    def interleave(event):
+        with Session(db.bind, expire_on_commit=False) as other:
+            if concurrent_change == "publish":
+                refresh_recommendations(other, incident_id, lambda session, query: [{"title": query}])
+            else:
+                invalidate_recommendations(other)
+                other.commit()
+            generations.append(other.get(Incident, incident_id).recommendation_generation)
+        return original(event)
+
+    monkeypatch.setattr(monitoring, "classify", interleave)
+    first["annotations"]["description"] = "A different failure now"
+    ingest_alerts(db, [first], "prometheus")
+    with Session(db.bind) as check:
+        item = check.get(Incident, incident_id)
+        assert item.recommendation_status == "pending"
+        assert item.recommendations == []
+        assert item.recommendation_generation > generations[0]
