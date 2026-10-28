@@ -10,7 +10,6 @@ x-backend: &backend
     REDIS_URL: redis://redis:6379/0
     PROMETHEUS_URL: ${PROMETHEUS_URL:-http://prometheus:9090}
     PROMETHEUS_TOKEN: ${PROMETHEUS_TOKEN:-}
-    OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:-copilot-demo}
     MODEL_CACHE: /data/models
     UPLOAD_DIR: /data/uploads
     DEMO_MODE: ${DEMO_MODE:-true}
