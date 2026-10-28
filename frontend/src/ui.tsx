@@ -35,6 +35,12 @@ export const handlingNames: Record<string, string> = {
   dismissed: "Отклонено",
 };
 export const actionNames: Record<string, string> = {
+  user_created: "Создан сотрудник",
+  user_enabled: "Доступ включён",
+  user_disabled: "Доступ отключён",
+  password_changed: "Изменён личный пароль",
+  password_reset: "Сброшен пароль",
+  account_provisioned: "Настройка учётной записи",
   accept: "Принято к ручному выполнению",
   complete: "Выполнено вручную",
   dismiss: "Рекомендация отклонена",

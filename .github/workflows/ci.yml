@@ -6,10 +6,15 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      E2E_EMAIL: e2e@example.org
+      E2E_PASSWORD: Only-for-tests-2026
     steps:
       - uses: actions/checkout@v5
       - name: Build and start real stack
-        run: docker compose up --build -d
+        run: |
+          docker compose up --build -d --wait
+          docker compose exec -T -e ADMIN_EMAIL="$E2E_EMAIL" -e ADMIN_PASSWORD="$E2E_PASSWORD" api python -m app.manage create-admin --non-interactive
       - name: Backend and real pgvector tests
         run: docker compose --profile test run --build --rm tests
       - name: Classifier benchmark

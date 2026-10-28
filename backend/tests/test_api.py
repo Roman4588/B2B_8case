@@ -11,13 +11,15 @@ from sqlalchemy.pool import StaticPool
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
+    from app.accounts import attempts
+    attempts.clear()
     from app.config import settings
 
     monkeypatch.setattr(settings(), "upload_dir", tmp_path)
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     with Session(engine) as db:
-        db.add(Operator(name="Инженер", password_hash=hash_password("test-password")))
+        db.add(Operator(name="Инженер", email="engineer@example.org", password_hash=hash_password("test-password")))
         db.add(
             Incident(
                 id="test-event",
@@ -42,13 +44,13 @@ def client(tmp_path, monkeypatch):
 
 
 def login(client):
-    assert client.post("/api/auth/login", json={"password": "test-password"}).status_code == 200
+    assert client.post("/api/auth/login", json={"email": "engineer@example.org", "password": "test-password"}).status_code == 200
 
 
 def test_requires_auth_and_records_manual_action(client):
     http, _ = client
     assert http.get("/api/incidents").status_code == 401
-    assert http.post("/api/auth/login", json={"password": "wrong"}).status_code == 401
+    assert http.post("/api/auth/login", json={"email": "engineer@example.org", "password": "wrong"}).status_code == 401
     login(http)
     assert http.get("/api/incidents").json()["total"] == 1
     response = http.post("/api/incidents/test-event/actions", json={"action": "accept", "comment": "Проверю"})

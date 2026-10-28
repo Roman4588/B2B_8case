@@ -17,4 +17,5 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
     & wsl -d B2B8Case -u root --exec docker @wslComposeArgs
 }
 if ($LASTEXITCODE -ne 0) { throw 'Запуск завершился с ошибкой. Проверьте сообщения Docker выше.' }
-Write-Host 'Интерфейс: http://localhost:8080. Пароль по умолчанию: copilot-demo'
+Write-Host 'Интерфейс: http://localhost:8080. Войдите с личным email и паролем.'
+Write-Host 'Первый запуск: powershell -ExecutionPolicy Bypass -File .\scripts\create-admin.ps1'

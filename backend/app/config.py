@@ -16,7 +16,6 @@ class Settings(BaseSettings):
     model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     model_cache: Path = Path("/data/models")
     upload_dir: Path = Path("/data/uploads")
-    operator_password: str = "copilot-demo"
     session_secure: bool = False
     demo_mode: bool = True
     demo_exporter_url: str = "http://demo-exporter:9101"

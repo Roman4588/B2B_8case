@@ -34,12 +34,24 @@ def create_session(db, operator: Operator) -> str:
     return token
 
 
-def require_operator(request: Request, db=Depends(get_db)) -> Operator:
+def current_operator(request: Request, db=Depends(get_db)) -> Operator:
     token = request.cookies.get("copilot_session", "")
     record = db.get(LoginSession, hashlib.sha256(token.encode()).hexdigest())
     if record is None or record.expires_at.replace(tzinfo=UTC) <= utcnow():
         raise HTTPException(401, "Войдите в систему")
     operator = db.get(Operator, record.operator_id)
-    if not operator:
+    if not operator or not operator.is_active or not operator.email:
         raise HTTPException(401, "Профиль не найден")
+    return operator
+
+
+def require_operator(operator=Depends(current_operator)) -> Operator:
+    if operator.must_change_password:
+        raise HTTPException(403, "Сначала смените временный пароль")
+    return operator
+
+
+def require_admin(operator=Depends(require_operator)) -> Operator:
+    if operator.role != "admin":
+        raise HTTPException(403, "Доступ только для администратора")
     return operator

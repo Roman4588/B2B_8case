@@ -105,6 +105,10 @@ class Operator(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     name: Mapped[str] = mapped_column(String(120), default="Дежурный инженер")
     password_hash: Mapped[str] = mapped_column(Text)
+    email: Mapped[str | None] = mapped_column(String(254), unique=True)
+    role: Mapped[str] = mapped_column(String(16), default="engineer", server_default="engineer")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class LoginSession(Base):

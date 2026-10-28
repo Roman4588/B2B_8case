@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
 import {
   Activity,
-  ArrowRight,
   BellRing,
   BookOpen,
-  Check,
   ChevronRight,
   CircleHelp,
   ClipboardList,
-  Command,
   LogOut,
   Radio,
   ShieldCheck,
   Sparkles,
+  Users,
+  UserRound,
 } from "lucide-react";
 import { api, useResource } from "./api";
 import { Incidents } from "./Incidents";
@@ -23,12 +22,20 @@ import { sourceStatusNames } from "./ui";
 import type { Source, Summary } from "./types";
 import { time } from "./ui";
 
-type Operator = { name: string; id: string };
+import {
+  Brand,
+  Login,
+  PasswordChange,
+  Employees,
+  type Operator,
+} from "./Accounts";
 const pages = [
   { id: "incidents", title: "События", icon: Activity },
   { id: "knowledge", title: "База знаний", icon: BookOpen },
   { id: "sources", title: "Источники", icon: Radio },
   { id: "audit", title: "Журнал действий", icon: ClipboardList },
+  { id: "users", title: "Сотрудники", icon: Users },
+  { id: "profile", title: "Мой профиль", icon: UserRound },
 ];
 
 export default function App() {
@@ -52,9 +59,25 @@ export default function App() {
       </div>
     );
   if (!operator) return <Login onLogin={setOperator} />;
+  const logout = () => {
+    void api("/auth/logout", { method: "POST" }).finally(() =>
+      setOperator(null),
+    );
+  };
+  if (operator.must_change_password)
+    return (
+      <main className="password-gate">
+        <PasswordChange
+          operator={operator}
+          onChanged={setOperator}
+          onLogout={logout}
+        />
+      </main>
+    );
   return (
     <Workspace
       operator={operator}
+      onProfile={setOperator}
       onLogout={() => {
         void api("/auth/logout", { method: "POST" }).finally(() =>
           setOperator(null),
@@ -64,105 +87,13 @@ export default function App() {
   );
 }
 
-function Login({ onLogin }: { onLogin: (operator: Operator) => void }) {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function submit() {
-    setBusy(true);
-    setError("");
-    try {
-      onLogin(
-        await api<Operator>("/auth/login", {
-          method: "POST",
-          body: JSON.stringify({ password }),
-        }),
-      );
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <main className="login-page">
-      <section className="login-story">
-        <div className="brand">
-          <span className="brand-icon">
-            <Command size={25} />
-          </span>
-          <strong>
-            Сигналис<span>AI OPERATIONS COPILOT</span>
-          </strong>
-        </div>
-        <div>
-          <span className="eyebrow">СПОКОЙНАЯ СМЕНА НАЧИНАЕТСЯ ЗДЕСЬ</span>
-          <h1>
-            Меньше шума.
-            <br />
-            Больше ясности.
-          </h1>
-          <p>
-            События мониторинга, опыт команды и понятный следующий шаг — в одном
-            рабочем пространстве.
-          </p>
-          <div className="login-points">
-            <span>
-              <Check size={17} /> Разбор инцидентов
-            </span>
-            <span>
-              <Check size={17} /> Проверенные регламенты
-            </span>
-            <span>
-              <Check size={17} /> Решение всегда за вами
-            </span>
-          </div>
-        </div>
-      </section>
-      <section className="login-form">
-        <span className="sparkle-circle">
-          <Sparkles size={27} />
-        </span>
-        <h2>Добро пожаловать на смену</h2>
-        <p>Войдите в рабочее пространство инженера</p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
-        >
-          <label>
-            Пароль
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              autoFocus
-              placeholder="Введите пароль"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-          {error && (
-            <div className="error" role="alert">
-              {error}
-            </div>
-          )}
-          <button className="primary" disabled={busy}>
-            {busy ? "Входим…" : "Начать работу"}
-            <ArrowRight size={17} />
-          </button>
-        </form>
-      </section>
-    </main>
-  );
-}
-
 function Workspace({
   operator,
   onLogout,
+  onProfile,
 }: {
   operator: Operator;
+  onProfile: (operator: Operator) => void;
   onLogout: () => void;
 }) {
   const [page, setPage] = useState("incidents");
@@ -181,28 +112,25 @@ function Workspace({
             setPage("incidents");
           }}
         >
-          <span className="brand-icon">
-            <Command size={23} />
-          </span>
-          <strong>
-            Сигналис<span>AI OPERATIONS COPILOT</span>
-          </strong>
+          <Brand />
         </a>
         <div className="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
         <nav>
-          {pages.map((item) => (
-            <button
-              key={item.id}
-              className={page === item.id ? "active" : ""}
-              onClick={() => setPage(item.id)}
-            >
-              <item.icon size={19} />
-              <span>{item.title}</span>
-              {item.id === "incidents" && !!summary.data?.pending && (
-                <b>{summary.data.pending}</b>
-              )}
-            </button>
-          ))}
+          {pages
+            .filter((item) => item.id !== "users" || operator.role === "admin")
+            .map((item) => (
+              <button
+                key={item.id}
+                className={page === item.id ? "active" : ""}
+                onClick={() => setPage(item.id)}
+              >
+                <item.icon size={19} />
+                <span>{item.title}</span>
+                {item.id === "incidents" && !!summary.data?.pending && (
+                  <b>{summary.data.pending}</b>
+                )}
+              </button>
+            ))}
         </nav>
         <div className="sidebar-note">
           <Sparkles size={21} />
@@ -218,10 +146,18 @@ function Workspace({
             Как это работает
           </button>
           <div>
-            <span className="avatar">ДИ</span>
+            <span className="avatar">
+              {operator.name
+                .split(" ")
+                .map((part) => part[0])
+                .slice(0, 2)
+                .join("")}
+            </span>
             <span>
               <strong>{operator.name}</strong>
-              <small>Локальное пространство</small>
+              <small>
+                {operator.role === "admin" ? "Администратор" : "Инженер"}
+              </small>
             </span>
             <button
               className="icon-button"
@@ -264,7 +200,7 @@ function Workspace({
         <main className="main-content">
           <div className="page-intro">
             <div>
-              <span className="eyebrow">AI OPERATIONS COPILOT / 08</span>
+              <span className="eyebrow">B2B-CENTER / СИГНАЛИС</span>
               <h1>
                 {page === "incidents"
                   ? "Держите ситуацию под контролем."
@@ -332,6 +268,12 @@ function Workspace({
           {page === "knowledge" && <Knowledge />}
           {page === "sources" && <Sources />}
           {page === "audit" && <Audit />}
+          {page === "users" && operator.role === "admin" && (
+            <Employees operator={operator} />
+          )}
+          {page === "profile" && (
+            <PasswordChange operator={operator} onChanged={onProfile} />
+          )}
           <footer className="page-footer">
             <span>
               <ShieldCheck size={14} /> Только рекомендации. Все действия

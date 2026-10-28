@@ -31,7 +31,7 @@ async function mockWorkspace(
     const url = new URL(route.request().url());
     let body: unknown = {};
     if (url.pathname === "/api/auth/me")
-      body = { id: "operator", name: "Инженер" };
+      body = { id: "operator", name: "Инженер", email: "engineer@example.org", role: "engineer", is_active: true, must_change_password: false };
     else if (url.pathname === "/api/summary")
       body = { critical: 1, warning: 0, info: 0, pending: 1, runbooks: 1 };
     else if (url.pathname === "/api/sources")

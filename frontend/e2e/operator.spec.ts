@@ -3,9 +3,12 @@ import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page
+    .getByLabel("Рабочий email")
+    .fill(process.env.E2E_EMAIL || "e2e@example.org");
+  await page
     .getByLabel("Пароль", { exact: true })
-    .fill(process.env.OPERATOR_PASSWORD || "copilot-demo");
-  await page.getByRole("button", { name: "Начать работу" }).click();
+    .fill(process.env.E2E_PASSWORD || "Only-for-tests-2026");
+  await page.getByRole("button", { name: "Войти", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Держите ситуацию под контролем." }),
   ).toBeVisible();

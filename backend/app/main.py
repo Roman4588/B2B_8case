@@ -1,6 +1,3 @@
-import hashlib
-import time
-from collections import defaultdict, deque
 from datetime import UTC, timedelta
 from pathlib import Path
 from typing import Literal
@@ -11,7 +8,8 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select, text
 
-from app.auth import create_session, require_operator, verify_password
+from app.accounts import router as accounts_router
+from app.auth import require_operator
 from app.config import settings
 from app.db import get_db
 from app.documents import RunbookInput
@@ -19,8 +17,6 @@ from app.models import (
     AuditEntry,
     ImportJob,
     Incident,
-    LoginSession,
-    Operator,
     Runbook,
     SourceState,
     uid,
@@ -32,7 +28,7 @@ from app.recommendations import invalidate_recommendations
 app = FastAPI(
     title="Дежурный · ИИ-ассистент", version="1.0.0", docs_url="/api/docs", openapi_url="/api/openapi.json"
 )
-attempts = defaultdict(deque)
+app.include_router(accounts_router)
 
 
 @app.middleware("http")
@@ -51,53 +47,6 @@ async def origin_and_security(request: Request, call_next):
 
 def public(row):
     return jsonable_encoder({c.name: getattr(row, c.name) for c in row.__table__.columns})
-
-
-class LoginInput(BaseModel):
-    password: str = Field(max_length=500)
-
-
-@app.post("/api/auth/login")
-def login(body: LoginInput, request: Request, response: Response, db=Depends(get_db)):
-    ip = request.client.host if request.client else "local"
-    queue = attempts[ip]
-    now = time.monotonic()
-    while queue and queue[0] < now - 60:
-        queue.popleft()
-    if len(queue) >= 10:
-        raise HTTPException(429, "Слишком много попыток. Повторите через минуту")
-    queue.append(now)
-    operator = db.scalar(select(Operator).limit(1))
-    if operator is None or not verify_password(body.password, operator.password_hash):
-        raise HTTPException(401, "Неверный пароль")
-    queue.clear()
-    token = create_session(db, operator)
-    response.set_cookie(
-        "copilot_session",
-        token,
-        httponly=True,
-        samesite="strict",
-        secure=settings().session_secure,
-        max_age=43200,
-        path="/api",
-    )
-    return {"id": operator.id, "name": operator.name}
-
-
-@app.get("/api/auth/me")
-def me(operator=Depends(require_operator)):
-    return {"id": operator.id, "name": operator.name}
-
-
-@app.post("/api/auth/logout")
-def logout(request: Request, response: Response, db=Depends(get_db)):
-    token = request.cookies.get("copilot_session", "")
-    record = db.get(LoginSession, hashlib.sha256(token.encode()).hexdigest())
-    if record:
-        db.delete(record)
-        db.commit()
-    response.delete_cookie("copilot_session", path="/api")
-    return {"ok": True}
 
 
 @app.get("/api/health/live")

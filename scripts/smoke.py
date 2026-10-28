@@ -30,7 +30,7 @@ def main(base_url):
     with httpx.Client(base_url=base_url, timeout=20) as client:
         wait_for(lambda: client.get("/api/health/ready").json(), lambda v: v.get("status") == "ready", 600)
         response = client.post(
-            "/api/auth/login", json={"password": os.getenv("OPERATOR_PASSWORD", "copilot-demo")}
+            "/api/auth/login", json={"email": os.environ["E2E_EMAIL"], "password": os.environ["E2E_PASSWORD"]}
         )
         response.raise_for_status()
         report["checks"]["login"] = True
