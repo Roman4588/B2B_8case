@@ -9,7 +9,8 @@ services:
     healthCheckPath: /
 
   - type: web
-    name: b2b8case-api
+    # Keep the service name aligned with frontend/deploy/nginx.conf.
+    name: api
     runtime: docker
     region: frankfurt
     plan: free
@@ -28,9 +29,9 @@ services:
           name: b2b8case-redis
           property: connectionString
       - key: PROMETHEUS_URL
-        value: http://b2b8case-prometheus:9090
+        value: http://127.0.0.1:65535
       - key: DEMO_EXPORTER_URL
-        value: http://b2b8case-demo-exporter:9101
+        value: http://127.0.0.1:65534
       - key: DEMO_MODE
         value: "true"
       - key: SESSION_SECURE
@@ -61,7 +62,7 @@ services:
           name: b2b8case-redis
           property: connectionString
       - key: PROMETHEUS_URL
-        value: http://b2b8case-prometheus:9090
+        value: http://127.0.0.1:65535
       - key: DEMO_MODE
         value: "true"
       - key: MODEL_CACHE
@@ -88,25 +89,9 @@ services:
           name: b2b8case-redis
           property: connectionString
       - key: PROMETHEUS_URL
-        value: http://b2b8case-prometheus:9090
+        value: http://127.0.0.1:65535
       - key: DEMO_MODE
         value: "true"
-
-  - type: pserv
-    name: b2b8case-prometheus
-    runtime: docker
-    region: frankfurt
-    plan: starter
-    dockerfilePath: ./deploy/prometheus/Dockerfile
-    dockerContext: .
-
-  - type: pserv
-    name: b2b8case-demo-exporter
-    runtime: docker
-    region: frankfurt
-    plan: starter
-    dockerfilePath: ./deploy/demo-exporter/Dockerfile
-    dockerContext: ./deploy/demo-exporter
 
   - type: keyvalue
     name: b2b8case-redis
