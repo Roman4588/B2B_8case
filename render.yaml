@@ -24,10 +24,7 @@ services:
           name: b2b8case-db
           property: connectionString
       - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: b2b8case-redis
-          property: connectionString
+        value: redis://127.0.0.1:65533/0
       - key: PROMETHEUS_URL
         value: http://127.0.0.1:65535
       - key: DEMO_EXPORTER_URL
@@ -42,64 +39,6 @@ services:
         value: /data/uploads
       - key: POSTGRES_PASSWORD
         sync: false
-
-  - type: worker
-    name: b2b8case-worker
-    runtime: docker
-    region: frankfurt
-    plan: free
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: .
-    dockerCommand: celery -A app.tasks.celery worker --pool=threads --concurrency=2 --loglevel=INFO
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: b2b8case-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: b2b8case-redis
-          property: connectionString
-      - key: PROMETHEUS_URL
-        value: http://127.0.0.1:65535
-      - key: DEMO_MODE
-        value: "true"
-      - key: MODEL_CACHE
-        value: /data/models
-      - key: UPLOAD_DIR
-        value: /data/uploads
-
-  - type: worker
-    name: b2b8case-beat
-    runtime: docker
-    region: frankfurt
-    plan: free
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: .
-    dockerCommand: celery -A app.tasks.celery beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: b2b8case-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: b2b8case-redis
-          property: connectionString
-      - key: PROMETHEUS_URL
-        value: http://127.0.0.1:65535
-      - key: DEMO_MODE
-        value: "true"
-
-  - type: keyvalue
-    name: b2b8case-redis
-    region: frankfurt
-    maxmemoryPolicy: noeviction
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: Render private network
 
 databases:
   - name: b2b8case-db
