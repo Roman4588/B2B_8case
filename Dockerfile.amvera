@@ -23,3 +23,5 @@ RUN chmod +x /usr/local/bin/start-amvera \
     && chown -R copilot /data /var/lib/nginx /var/log/nginx
 EXPOSE 80
 CMD ["/usr/local/bin/start-amvera"]
+
+
