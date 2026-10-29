@@ -3,7 +3,6 @@ from pathlib import Path
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from sqlalchemy.engine import URL
 
 
 class Settings(BaseSettings):
@@ -22,15 +21,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def resolve_database_url(self):
-        if not self.database_url or "host=db" in self.database_url or "@db:" in self.database_url:
-            self.database_url = URL.create(
-                "sqlite",
-                database="/data/app.db",
-            ).render_as_string(hide_password=False)
+        self.database_url = "sqlite:////data/app.db"
         return self
 
 
 @lru_cache
 def settings() -> Settings:
     return Settings()
-
