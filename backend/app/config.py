@@ -8,7 +8,7 @@ from sqlalchemy.engine import URL
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    database_url: str = ""
+    database_url: str = "sqlite:////data/app.db"
     postgres_password: str = "copilot-local"
     redis_url: str = "redis://redis:6379/0"
     prometheus_url: str = "http://prometheus:9090"
@@ -24,12 +24,8 @@ class Settings(BaseSettings):
     def resolve_database_url(self):
         if not self.database_url:
             self.database_url = URL.create(
-                "postgresql+psycopg",
-                username="copilot",
-                password=self.postgres_password,
-                host="db",
-                port=5432,
-                database="copilot",
+                "sqlite",
+                database="/data/app.db",
             ).render_as_string(hide_password=False)
         return self
 
