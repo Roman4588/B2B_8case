@@ -8,8 +8,10 @@ down_revision = None
 
 
 def upgrade():
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
-    Base.metadata.create_all(op.get_bind())
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    Base.metadata.create_all(bind)
 
 
 def downgrade():
