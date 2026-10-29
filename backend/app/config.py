@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def resolve_database_url(self):
-        if not self.database_url:
+        if not self.database_url or "host=db" in self.database_url or "@db:" in self.database_url:
             self.database_url = URL.create(
                 "sqlite",
                 database="/data/app.db",
@@ -33,3 +33,4 @@ class Settings(BaseSettings):
 @lru_cache
 def settings() -> Settings:
     return Settings()
+
