@@ -1,8 +1,9 @@
 import pytest
-from app.models import Base, Incident
-from app.recommendations import invalidate_recommendations, refresh_recommendations
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
+
+from app.models import Base, Incident
+from app.recommendations import invalidate_recommendations, refresh_recommendations
 
 
 @pytest.fixture

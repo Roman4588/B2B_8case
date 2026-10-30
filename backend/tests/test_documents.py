@@ -1,8 +1,9 @@
 from io import BytesIO
 
 import pytest
-from app.documents import extract, parse_runbooks
 from reportlab.pdfgen.canvas import Canvas
+
+from app.documents import extract, parse_runbooks
 
 
 def test_extracts_sixty_page_pdf():

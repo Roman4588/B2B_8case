@@ -1,11 +1,12 @@
 from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
+
 from app.models import AuditEntry, Base, Incident
 from app.monitoring import ingest_alerts
 from app.operations import manual_action
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session
 
 
 @pytest.fixture

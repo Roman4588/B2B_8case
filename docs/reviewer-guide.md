@@ -21,3 +21,17 @@ docker compose --profile test run --build --rm tests
 docker compose --profile test run --rm --no-deps tests python scripts/evaluate.py --output /tmp/classification.json
 ```
 HTTP и браузерные проверки используют E2E_EMAIL/E2E_PASSWORD выделенного тестового пользователя. Не запускайте их на рабочей базе: они создают инструкции и ручные действия.
+
+## Готовые образы релиза
+После успешной публикации тега v* workflow Publish release images собирает backend, frontend
+и demo-exporter в GHCR и создаёт GitHub Release. Публикация зависит от успешного полного CI.
+Для каждого нового пакета GitHub может потребоваться установить видимость Public, иначе
+проверяющему понадобится вход в GHCR. Не обещайте доступ без авторизации до проверки pull.
+
+Задайте SIGNALIS_VERSION равным опубликованному тегу и выполните:
+```bash
+docker compose -f docker-compose.yml -f compose.release.yml pull
+docker compose -f docker-compose.yml -f compose.release.yml up -d --no-build
+```
+Кэш модели заполняется при первом запуске; готовый образ сокращает сборку, но не отменяет
+первую загрузку модели. Для очной демонстрации заранее запустите стенд до ready.

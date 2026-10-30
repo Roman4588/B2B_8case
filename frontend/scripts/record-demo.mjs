@@ -6,9 +6,9 @@ const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
-const audio = process.env.DEMO_AUDIO_DIR || "D:/B2B_8case-runtime/demo-audio";
+const audio = process.env.DEMO_AUDIO_DIR || path.join(root, "outputs/demo-audio");
 const output =
-  process.env.DEMO_OUTPUT_DIR || "D:/B2B_8case-runtime/demo-recording";
+  process.env.DEMO_OUTPUT_DIR || path.join(root, "outputs/demo-recording");
 await mkdir(output, { recursive: true });
 await mkdir(path.join(root, "docs/media"), { recursive: true });
 const story = JSON.parse(

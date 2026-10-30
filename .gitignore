@@ -17,3 +17,5 @@ playwright-report/
 tools/publish-bundle.json
 *.cookies
 docs/media/*.webm
+
+outputs/

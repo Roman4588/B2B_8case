@@ -12,3 +12,5 @@ services:
     <<: *release-backend
   frontend:
     image: ghcr.io/roman4588/b2b_8case/frontend:${SIGNALIS_VERSION:?Set SIGNALIS_VERSION}
+  demo-exporter:
+    image: ghcr.io/roman4588/b2b_8case/demo-exporter:${SIGNALIS_VERSION:?Set SIGNALIS_VERSION}

@@ -1,10 +1,11 @@
 import pytest
-from app.auth import hash_password
-from app.main import app
-from app.models import Operator
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from test_api import client  # noqa: F401
+
+from app.auth import hash_password
+from app.main import app
+from app.models import Operator
 
 
 @pytest.fixture

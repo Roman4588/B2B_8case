@@ -1,12 +1,13 @@
 import pytest
-from app.auth import hash_password
-from app.db import get_db
-from app.main import app
-from app.models import Base, ImportJob, Incident, Operator
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
+
+from app.auth import hash_password
+from app.db import get_db
+from app.main import app
+from app.models import Base, ImportJob, Incident, Operator
 
 
 @pytest.fixture
@@ -45,6 +46,23 @@ def client(tmp_path, monkeypatch):
 
 def login(client):
     assert client.post("/api/auth/login", json={"email": "engineer@example.org", "password": "test-password"}).status_code == 200
+
+
+def test_demo_failure_does_not_fabricate_monitoring(client, monkeypatch):
+    import httpx
+
+    from app.config import settings
+    from app.models import SourceState
+
+    test_client, engine = client
+    login(test_client)
+    monkeypatch.setattr(settings(), "demo_mode", True)
+    def offline(*args, **kwargs):
+        raise httpx.ConnectError("exporter offline")
+    monkeypatch.setattr(httpx, "post", offline)
+    assert test_client.post("/api/demo", json={"scenario": "outage"}).status_code == 503
+    with Session(engine) as db:
+        assert db.get(SourceState, "prometheus") is None
 
 
 def test_requires_auth_and_records_manual_action(client):

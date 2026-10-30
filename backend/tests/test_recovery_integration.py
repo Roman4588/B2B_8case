@@ -218,6 +218,7 @@ def test_postgres_upgrade_preserves_existing_decisions(factory):
 
     from alembic.migration import MigrationContext
     from alembic.operations import Operations
+
     from app.models import AuditEntry, Incident
 
     with factory() as db:

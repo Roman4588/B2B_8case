@@ -6,7 +6,10 @@ permissions:
   contents: write
   packages: write
 jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
   publish:
+    needs: verify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -31,6 +34,11 @@ jobs:
           file: frontend/Dockerfile
           push: true
           tags: ${{ env.IMAGE_ROOT }}/frontend:${{ github.ref_name }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: deploy/demo-exporter
+          push: true
+          tags: ${{ env.IMAGE_ROOT }}/demo-exporter:${{ github.ref_name }}
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

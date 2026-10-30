@@ -2,8 +2,9 @@ import importlib
 
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from migrations.initial_schema import Base as InitialBase
 from sqlalchemy import create_engine, inspect, text
+
+from migrations.initial_schema import Base as InitialBase
 
 
 def test_existing_database_gains_generation_without_losing_incidents():

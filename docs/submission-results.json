@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-30",
+  "backend_passed": 62,
+  "browser_passed": 10,
+  "browser_seconds": 52.5,
+  "classifier_author_samples": 48,
+  "classifier_author_accuracy": 1.0,
+  "additional_author_samples": 12,
+  "additional_author_accuracy": 1.0,
+  "pdf_pages": 60,
+  "pdf_http_response_seconds": 0.132,
+  "pdf_processing_seconds": 22.355,
+  "video_seconds": 231.44,
+  "cloud_verified": false,
+  "limitation": "Author-created datasets; no independent organizer benchmark or load/security audit."
+}

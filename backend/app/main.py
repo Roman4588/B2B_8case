@@ -23,7 +23,6 @@ from app.models import (
     utcnow,
 )
 from app.operations import manual_action
-from app.monitoring import ingest_alerts
 from app.recommendations import invalidate_recommendations
 
 app = FastAPI(
@@ -330,32 +329,6 @@ class DemoInput(BaseModel):
     scenario: Literal["normal", "outage", "warning"]
 
 
-def _local_demo_alerts(scenario: str) -> list[dict]:
-    """Build a small synthetic Prometheus snapshot for the free cloud demo."""
-    if scenario == "normal":
-        return []
-    severity = "critical" if scenario == "outage" else "warning"
-    return [
-        {
-            "state": "firing",
-            "activeAt": utcnow().isoformat(),
-            "labels": {
-                "alertname": "B2BCheckoutLatency",
-                "severity": severity,
-                "service": "tender-api",
-                "host": "demo-tender-01",
-            },
-            "annotations": {
-                "summary": "Высокая задержка API торговой площадки",
-                "description": (
-                    "Синтетическое событие демонстрационного стенда: "
-                    "p95 задержки превышает порог."
-                ),
-            },
-        }
-    ]
-
-
 @app.post("/api/demo")
 def demo(body: DemoInput, operator=Depends(require_operator), db=Depends(get_db)):
     if not settings().demo_mode:
@@ -367,9 +340,7 @@ def demo(body: DemoInput, operator=Depends(require_operator), db=Depends(get_db)
             settings().demo_exporter_url + "/scenario", json=body.model_dump(), timeout=5
         ).raise_for_status()
     except httpx.HTTPError as exc:
-        # Render's free tier cannot run a private exporter. Keep the demo
-        # usable by ingesting the same synthetic snapshot in the API process.
-        ingest_alerts(db, _local_demo_alerts(body.scenario), "prometheus")
+        raise HTTPException(503, "Учебный источник недоступен. Проверьте demo-exporter и Prometheus.") from exc
     db.add(AuditEntry(actor=operator.name, action="demo_scenario", comment=body.scenario))
     db.commit()
     return {"status": "ok", "detail": "Меняются только демонстрационные метрики"}
