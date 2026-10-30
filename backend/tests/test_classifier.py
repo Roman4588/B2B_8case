@@ -94,4 +94,3 @@ def test_complete_source_labels_do_not_load_text_model_dependencies():
         cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True,
     )
     assert result.returncode == 0, result.stderr
-
