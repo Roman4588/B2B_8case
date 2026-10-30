@@ -1,33 +1,15 @@
-# Полный деплой в Amvera
+# Деплой в Amvera
 
-Одного контейнера API+Nginx недостаточно для кейса 8. Используйте общую приватную сеть:
+Для согласованного бюджета 490 ₽/30 дней используется одно существующее приложение B2B на тарифе «Начальный Плюс»: 0,5 CPU, 1 ГБ RAM, 5 ГБ диска. Автоскейлинг выключен.
 
-| Сервис | Конфигурация |
-|---|---|
-| PostgreSQL | PostgreSQL 17 с расширением vector; постоянный диск; база copilot |
-| Redis | Redis 7, приватный адрес, постоянный диск |
-| Web | Dockerfile.amvera, порт 80, /data для uploads/models |
-| Worker | backend/Dockerfile, celery -A app.tasks.celery worker --pool=threads --concurrency=2 --loglevel=INFO; тот же доступ к uploads/models |
-| Beat | backend/Dockerfile, celery -A app.tasks.celery beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule |
-| Prometheus | deploy/prometheus, порт 9090 внутри сети |
-| Учебный exporter | deploy/demo-exporter, порт 9101 внутри сети |
+Корневой `amvera.yaml`: Dockerfile `deploy/amvera/Dockerfile.standalone`, порт 80, постоянный том `/data`. Не заменять его старым Dockerfile.amvera: тот предполагает внешние службы.
 
-Для API, worker и beat задайте одинаковые DATABASE_URL (postgresql+psycopg://...), REDIS_URL,
-PROMETHEUS_URL и DEMO_EXPORTER_URL. Не используйте localhost для другого приложения.
-SESSION_SECURE=true для HTTPS. ADMIN_EMAIL/ADMIN_PASSWORD — только секреты приложения.
-Пароль применяется при создании нового аккаунта; существующий не сбрасывается автоматически.
+Контейнер запускает Nginx, API, Celery worker/beat, PostgreSQL с pgvector, Redis, Prometheus и учебный exporter. Все внутренние службы доступны только через loopback. Единственная модель работает в worker; память ограничивает конкурентную нагрузку. Общий /data обеспечивает фактическую доступность файлов API и worker.
 
-Если хостинг не поддерживает общий файловый том для API и worker, используйте полноценный
-Compose на одном сервере: файлы импорта должны быть доступны обработчику, а не только web.
-Не переключайте на SQLite: поиск и фоновые блокировки требуют PostgreSQL/pgvector.
+Переменные: [standalone.env.example](../deploy/amvera/standalone.env.example). `SESSION_SECURE=true` установлен в образе для HTTPS. ADMIN_EMAIL/ADMIN_PASSWORD используются только для первоначального создания администратора; существующий пароль не сбрасывается. Секреты не публиковать в Git. DATABASE_URL и адреса внутренних служб формируются при запуске.
 
-Перед публикацией: миграции завершены, worker готов, /api/health/ready возвращает ready,
-Prometheus online, новый документ индексируется, поиск находит его, событие получает рекомендацию,
-ручное действие попадает в аудит. Только после этого помечайте ссылку как рабочее демо.
+До смены кода штатно остановить старое приложение и скачать резервную копию Data. Исходный `/data/app.db` сохраняется; перенос в PostgreSQL транзакционный и идемпотентный. Не удалять /data и файл .postgres-password. Запускать одну реплику: несколько экземпляров PostgreSQL на одном каталоге недопустимы.
 
-Размер тарифа выбирается по измеренной памяти всех процессов; самый маленький тариф может
-не вместить модель. Создание платных ресурсов и изменение тарифа согласуются с владельцем.
+Локальная проверка: `docker compose --env-file .env -f deploy/amvera/compose.budget.yml up --build -d`, временные PREFLIGHT_EMAIL/PREFLIGHT_PASSWORD задаются вне Git. Тестовый порт 127.0.0.1:8083, отдельный том, 950 MiB RAM без swap и 0,5 CPU.
 
-Альтернатива для платформы с одним Dockerfile: Dockerfile.amvera поддерживает APP_ROLE=web (по умолчанию), worker и beat. Создайте три приложения из одного образа; задайте общую БД/Redis и общий доступ к uploads. Это не заменяет отдельные PostgreSQL, Redis и мониторинг. Сначала запустите web для миграций.
-
-Шаблон без секретов: [deploy/amvera/env.example](../deploy/amvera/env.example). Дополнительный [отчёт проверки образа](amvera-preflight-2026-10-30.md) подготовлен в другом чате; он не подтверждает выполненный деплой.
+[Отчёт и все 21 проверки](amvera-deployment-2026-10-30.md) различает локальные результаты и облачные. Не считать страницу Nginx или статус панели подтверждением готовности. Перед объявлением рабочего демо проверить ready, вход, мониторинг, рекомендации, фоновый импорт, поиск и сохранность после перезапуска через публичный адрес.

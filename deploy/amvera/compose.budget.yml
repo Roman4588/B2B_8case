@@ -1,0 +1,20 @@
+name: signalis-amvera-budget
+services:
+  application:
+    image: signalis-amvera-budget:preflight
+    build:
+      context: ../..
+      dockerfile: deploy/amvera/Dockerfile.standalone
+    # Conservative ceiling below one decimal GB, with no extra swap allowance.
+    mem_limit: 950m
+    memswap_limit: 950m
+    cpus: 0.5
+    environment:
+      ADMIN_EMAIL: ${PREFLIGHT_EMAIL:?Set temporary administrator email}
+      ADMIN_PASSWORD: ${PREFLIGHT_PASSWORD:?Set temporary administrator password}
+      SESSION_SECURE: "false"
+    volumes: [application:/data]
+    ports: [127.0.0.1:8083:80]
+    stop_grace_period: 40s
+volumes:
+  application:

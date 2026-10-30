@@ -1,0 +1,22 @@
+{
+  "base_url": "http://application",
+  "checks": {
+    "login": true,
+    "real_alert_and_recommendations": true,
+    "manual_confirmation_and_idempotence": true,
+    "sixty_page_pdf_background_import": true,
+    "logout": true,
+    "engineer_has_no_admin_access": true,
+    "session_after_page_request": true,
+    "prometheus_poll_timestamp_advances": true,
+    "scenario_changes_prometheus_events": true,
+    "manual_completion_audit_and_idempotence": true,
+    "json_worker_import_and_paraphrased_search": true,
+    "narrative_markdown_one_runbook": true
+  },
+  "pdf_upload_response_seconds": 0.031,
+  "pdf_processing_seconds": 8.065,
+  "import_job_id": "dd717727-ae69-4964-8be4-224acbaaa611",
+  "indexed_runbooks": 73,
+  "demonstration_engineer_email": "reviewer-a4c09042@example.org"
+}

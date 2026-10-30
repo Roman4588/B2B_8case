@@ -1,13 +1,12 @@
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
-
 from app.auth import hash_password
 from app.db import get_db
 from app.main import app
 from app.models import Base, ImportJob, Incident, Operator
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture
@@ -50,7 +49,6 @@ def login(client):
 
 def test_demo_failure_does_not_fabricate_monitoring(client, monkeypatch):
     import httpx
-
     from app.config import settings
     from app.models import SourceState
 
@@ -63,6 +61,43 @@ def test_demo_failure_does_not_fabricate_monitoring(client, monkeypatch):
     assert test_client.post("/api/demo", json={"scenario": "outage"}).status_code == 503
     with Session(engine) as db:
         assert db.get(SourceState, "prometheus") is None
+
+
+def test_compact_search_runs_in_worker_without_loading_local_model(client, monkeypatch):
+    from types import SimpleNamespace
+
+    import app.knowledge as knowledge
+    import app.main as api
+    import app.tasks as tasks
+
+    http, _ = client
+    login(http)
+    monkeypatch.setattr(api, "settings", lambda: SimpleNamespace(search_in_worker=True))
+    def forbidden(*args, **kwargs):
+        raise AssertionError("API must not load a second embedding model")
+    monkeypatch.setattr(knowledge, "search_runbooks", forbidden)
+    expected = [{"id": "worker-hit", "title": "Очередь заказов", "similarity": 0.8}]
+    monkeypatch.setattr(tasks.semantic_search, "delay", lambda query, limit: SimpleNamespace(get=lambda **kwargs: expected, forget=lambda: None))
+    response = http.get("/api/runbooks", params={"q": "Заказы стоят"})
+    assert response.status_code == 200
+    assert response.json() == {"items": expected, "semantic": True}
+
+
+def test_compact_search_worker_timeout_is_explicit_error(client, monkeypatch):
+    from types import SimpleNamespace
+
+    import app.main as api
+    import app.tasks as tasks
+
+    http, _ = client
+    login(http)
+    monkeypatch.setattr(api, "settings", lambda: SimpleNamespace(search_in_worker=True))
+    def timeout(**kwargs):
+        raise TimeoutError("worker busy")
+    monkeypatch.setattr(tasks.semantic_search, "delay", lambda query, limit: SimpleNamespace(get=timeout, forget=lambda: None))
+    response = http.get("/api/runbooks", params={"q": "Очередь"})
+    assert response.status_code == 503
+    assert "Модель поиска недоступна" in response.json()["detail"]
 
 
 def test_requires_auth_and_records_manual_action(client):

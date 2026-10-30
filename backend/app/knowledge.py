@@ -16,12 +16,13 @@ def embedding_model():
 
     config = settings()
     config.model_cache.mkdir(parents=True, exist_ok=True)
-    return TextEmbedding(model_name=config.model_name, cache_dir=str(config.model_cache), threads=2)
+    return TextEmbedding(model_name=config.model_name, cache_dir=str(config.model_cache),
+                         threads=config.embedding_threads, enable_cpu_mem_arena=config.embedding_memory_arena)
 
 
 def embed(texts: list[str]) -> list[list[float]]:
     with _lock:
-        return [row.tolist() for row in embedding_model().embed(texts, batch_size=16)]
+        return [row.tolist() for row in embedding_model().embed(texts, batch_size=settings().embedding_batch_size)]
 
 
 def index_runbook(db, runbook_id: str):

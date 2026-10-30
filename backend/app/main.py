@@ -176,6 +176,14 @@ def runbooks(q: str = "", operator=Depends(require_operator), db=Depends(get_db)
         from app.knowledge import search_runbooks
 
         try:
+            if settings().search_in_worker:
+                from app.tasks import semantic_search
+
+                result = semantic_search.delay(q, 20)
+                try:
+                    return {"items": result.get(timeout=20), "semantic": True}
+                finally:
+                    result.forget()
             return {"items": search_runbooks(db, q, 20), "semantic": True}
         except Exception as exc:
             raise HTTPException(503, "Модель поиска недоступна. Проверьте состояние базы знаний") from exc

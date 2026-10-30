@@ -33,6 +33,12 @@ celery.conf.update(
 )
 
 
+@celery.task(name="app.tasks.semantic_search")
+def semantic_search(query: str, limit: int = 20):
+    with session_factory()() as db:
+        return search_runbooks(db, query, limit)
+
+
 def process_import(db, job_id: str):
     with import_lock(db, job_id) as acquired:
         if acquired:

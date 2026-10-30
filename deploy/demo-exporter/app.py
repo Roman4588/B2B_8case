@@ -1,5 +1,6 @@
 """Only synthetic metrics. No access to any monitored host or execution API."""
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
 
@@ -38,4 +39,4 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(400)
 
 
-ThreadingHTTPServer(("0.0.0.0", 9101), Handler).serve_forever()
+ThreadingHTTPServer((os.getenv("EXPORTER_HOST", "0.0.0.0"), 9101), Handler).serve_forever()

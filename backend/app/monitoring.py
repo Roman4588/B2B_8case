@@ -5,9 +5,15 @@ from datetime import UTC, datetime
 import httpx
 from sqlalchemy import select, update
 
-from app.classifier import classify
 from app.config import settings
 from app.models import Incident, SourceState, uid, utcnow
+
+
+def classify(event: dict):
+    # API and beat import monitoring, but only worker ingestion needs sklearn.
+    from app.classifier import classify as classify_event
+
+    return classify_event(event)
 
 
 def fingerprint(labels):
