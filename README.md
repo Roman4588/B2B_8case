@@ -44,7 +44,7 @@ docker compose exec api python -m app.manage create-admin
 
 **[Проверка за 5–7 минут](docs/reviewer-guide.md)** ·
 **[Тестовый документ](examples/reviewer-queue.json)** ·
-**[Видео команды](docs/media/deykstra-demo.mp4)** ·
+**[Видео команды](docs/media/signalis-presentation.mp4)** ·
 **[Отчёт проверки](docs/submission-verification.md)**.
 
 Остановка без удаления данных: `docker compose down`.
@@ -199,10 +199,12 @@ npm run test:e2e
 
 ## Видео для сдачи
 
-[Демонстрация команды «Дейкстра»](docs/media/deykstra-demo.mp4) — представление команды,
-архитектура и работа реального приложения, менее пяти минут.
-Использована синтетическая русская озвучка, а не запись голосов участников.
-Исходный сценарий: [storyboard.json](demo/storyboard.json).
+[Видеопрезентация команды «Дейкстра»](docs/media/signalis-presentation.mp4) — представление команды,
+архитектура и демонстрация приложения: **4:49,9, Full HD, 30 кадров/с**.
+
+[Скачать MP4](https://github.com/Roman4588/B2B_8case/raw/refs/heads/main/docs/media/signalis-presentation.mp4) ·
+[Русские субтитры SRT](docs/media/signalis-presentation.srt) ·
+[Материалы и проверка видео](docs/video-presentation.md).
 
 ## Если что-то не запускается
 
