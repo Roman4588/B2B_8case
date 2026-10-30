@@ -4,6 +4,7 @@ import signal
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import pytest
 
@@ -28,7 +29,8 @@ def launch(tmp_path, fail):
         failure = f"import time\nfrom pathlib import Path\nwhile not Path({str(pidfile)!r}).exists():\n time.sleep(.01)\nraise SystemExit(7)"
         commands.append([sys.executable, "-c", failure])
     code = f"from app.processes import run_services; raise SystemExit(run_services({commands!r}, grace_seconds=1))"
-    runner = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    runner = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              text=True, cwd=Path(__file__).resolve().parents[1])
     return runner, wait_file(pidfile, runner)
 
 

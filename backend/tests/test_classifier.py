@@ -1,5 +1,4 @@
 import pytest
-
 from app.classifier import classify
 
 
@@ -83,3 +82,16 @@ def test_negated_outage_needs_review_instead_of_keyword_critical():
     result = classify({"title": "PostgreSQL is not down"})
     assert result["severity"] != "critical"
     assert result["needs_review"]
+def test_complete_source_labels_do_not_load_text_model_dependencies():
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import sys; from app.classifier import classify; "
+         "result=classify({'labels': {'category': 'database', 'severity': 'critical'}}); "
+         "assert result['priority'] == 'P1'; assert 'sklearn' not in sys.modules"],
+        cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+

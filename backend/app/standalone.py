@@ -38,15 +38,15 @@ def commands():
         MODEL_CACHE="/data/models", UPLOAD_DIR="/data/uploads", SINGLE_STACK="true",
         SEARCH_IN_WORKER="true", EMBEDDING_THREADS="1", EMBEDDING_BATCH_SIZE="1",
         EMBEDDING_MEMORY_ARENA="false", MALLOC_ARENA_MAX="2", OMP_NUM_THREADS="1",
-        OPENBLAS_NUM_THREADS="1",
+        OPENBLAS_NUM_THREADS="1", GOMEMLIMIT="48MiB", GOGC="50",
     )
     return [
         [sys.executable, "-m", "app.standalone", "postgres"],
         ["redis-server", "--bind", "127.0.0.1", "--dir", "/data/redis", "--appendonly", "yes",
          "--maxmemory", "32mb", "--maxmemory-policy", "noeviction"],
         [sys.executable, "/opt/exporter.py"],
-        ["prometheus", "--web.listen-address=127.0.0.1:9090", "--config.file=/etc/prometheus/prometheus.yml",
-         "--storage.tsdb.path=/data/prometheus", "--storage.tsdb.retention.time=2d",
+        ["prometheus", "--no-auto-gomemlimit", "--web.listen-address=127.0.0.1:9090", "--config.file=/etc/prometheus/prometheus.yml",
+         "--storage.tsdb.path=/tmp/prometheus", "--storage.tsdb.retention.time=2d",
          "--storage.tsdb.retention.size=400MB", "--storage.tsdb.wal-compression"],
         [sys.executable, "-m", "app.processes", "application"],
     ]
@@ -89,6 +89,11 @@ def start_postgres():
     import pwd
 
     account = pwd.getpwnam("postgres")
+    # Cloud runtimes may mount an empty /run, hiding directories created at image build time.
+    socket_directory = Path("/run/postgresql")
+    socket_directory.mkdir(parents=True, exist_ok=True)
+    os.chown(socket_directory, account.pw_uid, account.pw_gid)
+    socket_directory.chmod(0o775)
     folder = Path("/data/postgres")
     os.chown(folder, account.pw_uid, account.pw_gid)
     folder.chmod(0o700)

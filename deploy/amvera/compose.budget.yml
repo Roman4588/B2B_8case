@@ -9,6 +9,7 @@ services:
     mem_limit: 950m
     memswap_limit: 950m
     cpus: 0.5
+    tmpfs: [/run]
     environment:
       ADMIN_EMAIL: ${PREFLIGHT_EMAIL:?Set temporary administrator email}
       ADMIN_PASSWORD: ${PREFLIGHT_PASSWORD:?Set temporary administrator password}

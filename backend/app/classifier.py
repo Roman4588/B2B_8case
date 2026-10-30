@@ -8,10 +8,6 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
-
 CATEGORIES = ("server", "network", "database", "application")
 SEVERITIES = ("critical", "warning", "info")
 CATEGORY_PATTERNS = {
@@ -36,6 +32,10 @@ WARNING = r"warning|предупрежд|threshold|порог|elevated|rising|pr
 
 @lru_cache
 def text_models():
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+
     data = json.loads((Path(__file__).parent / "seed" / "training.json").read_text(encoding="utf-8"))
     models = {}
     for field, groups in data.items():
