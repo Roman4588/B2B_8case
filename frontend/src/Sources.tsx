@@ -13,6 +13,7 @@ import { sourceStatusNames, time } from "./ui";
 
 export function Sources() {
   const { data, error, refresh } = useResource<Source>("/sources");
+  const readiness = useResource<{status: string; indexed_runbooks: number}>("/health/ready", 10000);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   async function sync() {
@@ -51,6 +52,12 @@ export function Sources() {
         </div>
       </div>
       {error && <div className="error">{error}</div>}
+      <div className="hint" role="status">
+        API: {data ? "доступен" : "проверяется"}. База знаний: {readiness.data?.status === "ready"
+          ? `готова, инструкций: ${readiness.data.indexed_runbooks}`
+          : "подготовка или нет связи — дождитесь загрузки модели"}.
+        Мониторинг проверяется отдельно ниже.
+      </div>
       <section className="source-card">
         <header>
           <span className="prometheus-logo">

@@ -52,3 +52,24 @@ def test_numbered_english_rules_keep_multiline_actions():
     )
     assert len(records) == 2
     assert records[0]["steps"] == ["Check df -h", "Archive agreed files"]
+
+
+def test_narrative_markdown_keeps_steps_and_cautions_together():
+    records = parse_runbooks(
+        "# Очередь заказов\n\n## Симптомы\nЗадания не обрабатываются.\n"
+        "## Порядок проверки\n1. Проверить обработчик\n2. Проверить брокер\n"
+        "## Ограничения\nНе очищать очередь.", ".md", "queue.md"
+    )
+    assert len(records) == 1
+    assert records[0]["title"] == "Очередь заказов"
+    assert "Не очищать очередь" in "\n".join(records[0]["steps"])
+    assert "Проверить обработчик" in "\n".join(records[0]["steps"])
+
+
+def test_explicit_markdown_rules_stay_separate():
+    records = parse_runbooks(
+        "# Диск\nЕсли диск заполнен → Согласовать архивирование\n"
+        "# API\nЕсли API недоступен → Проверить upstream", ".md", "rules.md"
+    )
+    assert len(records) == 2
+    assert records[1]["condition"] == "API недоступен"

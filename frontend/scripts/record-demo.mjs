@@ -36,15 +36,18 @@ for (let i = 0; i < story.length; i++)
   );
 const total = story.reduce((n, s) => n + s.seconds, 0);
 if (total > 295) throw Error(`Demo longer than five minutes: ${total}`);
-const browser = await chromium.launch();
+const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL });
 const context = await browser.newContext({
   viewport: { width: 1440, height: 900 },
   recordVideo: { dir: output, size: { width: 1440, height: 900 } },
 });
 const base = process.env.BASE_URL || "http://localhost:8080";
-await context.request.post(base + "/api/auth/login", {
-  data: { password: process.env.OPERATOR_PASSWORD || "copilot-demo" },
+if (!process.env.E2E_EMAIL || !process.env.E2E_PASSWORD)
+  throw Error("Set E2E_EMAIL and E2E_PASSWORD for the recording account");
+const login = await context.request.post(base + "/api/auth/login", {
+  data: { email: process.env.E2E_EMAIL, password: process.env.E2E_PASSWORD },
 });
+if (!login.ok()) throw Error(`Recording login failed: ${login.status()}`);
 await context.request.post(base + "/api/demo", {
   data: { scenario: "normal" },
 });

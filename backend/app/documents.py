@@ -80,6 +80,19 @@ def parse_runbooks(text: str, extension: str, filename: str = "Документ"
             data = json.loads(text)
             records = data if isinstance(data, list) else [data]
         else:
+            explicit_rules = re.search(
+                r"\b(?:Если|If)\s+.+?\s*(?:→|->|⇒|\bthen\b)\s*.+",
+                text, flags=re.IGNORECASE | re.DOTALL,
+            )
+            if extension == ".md" and not explicit_rules:
+                # Headings describe sections of the same procedure, not independent advice.
+                # Chunking for vector search is handled later, without losing cautions.
+                title = re.search(r"(?m)^#\s+(.+)$", text)
+                return [RunbookInput(
+                    title=(title.group(1).strip() if title else filename)[:200],
+                    condition=text[:30000],
+                    steps=[text[start:start + 10000] for start in range(0, len(text), 10000)],
+                ).model_dump()]
             records = []
             # Each line-start If/Если begins a separate rule, including plain TXT
             # and text extracted from PDF/DOCX without Markdown headings.
@@ -104,6 +117,8 @@ def parse_runbooks(text: str, extension: str, filename: str = "Документ"
                         dict(title=condition.strip()[:200], condition=condition.strip(), steps=steps)
                     )
                 else:
+                    if explicit_rules:
+                        continue
                     # Narrative runbooks remain searchable, with their original text as instruction.
                     for offset in range(0, len(block), 6000):
                         part = block[offset : offset + 6000]

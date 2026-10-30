@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import quote_plus
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -7,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    database_url: str = "sqlite:////data/app.db"
+    database_url: str = ""
     postgres_password: str = "copilot-local"
     redis_url: str = "redis://redis:6379/0"
     prometheus_url: str = "http://prometheus:9090"
@@ -21,7 +22,9 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def resolve_database_url(self):
-        self.database_url = "sqlite:////data/app.db"
+        if not self.database_url:
+            password = quote_plus(self.postgres_password)
+            self.database_url = f"postgresql+psycopg://copilot:{password}@db:5432/copilot"
         return self
 
 

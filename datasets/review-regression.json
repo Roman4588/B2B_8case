@@ -1,0 +1,86 @@
+[
+  {
+    "title": "Critical database outage on PostgreSQL primary",
+    "labels": {},
+    "severity": "critical",
+    "category": "database",
+    "priority": "P1"
+  },
+  {
+    "title": "Warning: disk capacity threshold exceeded on backup host",
+    "labels": {},
+    "severity": "warning",
+    "category": "server",
+    "priority": "P3"
+  },
+  {
+    "title": "Network packet loss rising near gateway",
+    "labels": {},
+    "severity": "warning",
+    "category": "network",
+    "priority": "P3"
+  },
+  {
+    "title": "Nginx deployment finished successfully",
+    "labels": {},
+    "severity": "info",
+    "category": "application",
+    "priority": "P4"
+  },
+  {
+    "title": "Критический отказ приложения API на узле api-77",
+    "labels": {},
+    "severity": "critical",
+    "category": "application",
+    "priority": "P1"
+  },
+  {
+    "title": "Предупреждение: высокая загрузка процессора на сервере",
+    "labels": {},
+    "severity": "warning",
+    "category": "server",
+    "priority": "P3"
+  },
+  {
+    "title": "DNS restored successfully after scheduled work",
+    "labels": {},
+    "severity": "info",
+    "category": "network",
+    "priority": "P4"
+  },
+  {
+    "title": "PostgreSQL replication restored successfully",
+    "labels": {},
+    "severity": "info",
+    "category": "database",
+    "priority": "P4"
+  },
+  {
+    "title": "Критическая авария маршрутизатора, gateway unreachable",
+    "labels": {},
+    "severity": "critical",
+    "category": "network",
+    "priority": "P1"
+  },
+  {
+    "title": "Disk unavailable on storage server",
+    "labels": {},
+    "severity": "critical",
+    "category": "server",
+    "priority": "P1"
+  },
+  {
+    "title": "API latency elevated after release",
+    "labels": {},
+    "severity": "warning",
+    "category": "application",
+    "priority": "P3"
+  },
+  {
+    "title": "PostgreSQL replica latency rising",
+    "labels": {},
+    "severity": "warning",
+    "category": "database",
+    "priority": "P3"
+  }
+]

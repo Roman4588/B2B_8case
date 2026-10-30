@@ -1,0 +1,1 @@
+Кейс 8: воспроизводимый PostgreSQL/pgvector стенд, исправленный импорт цельных Markdown-регламентов, проверка готовности при запуске Windows, руководство жюри и пример JSON. Проверки и ограничения: docs/submission-verification.md. Начните с README и docs/reviewer-guide.md. Cloud deployment status is documented separately; do not infer it from image publication.
