@@ -25,6 +25,3 @@
 финальная карточка `logo-shrink-wordmark-lockup`, Apache-2.0.
 Музыка: **G Eazy NBA type — Arulo**, [Mixkit](https://assets.mixkit.co/music/403/403.mp3), Mixkit Stock Music Free License.
 Звуковой переход: **Whoosh #1 — Kinoton**, [Freesound](https://freesound.org/people/Kinoton/sounds/427823/), CC0-1.0.
-
-Предыдущая [демонстрационная запись](media/deykstra-demo.mp4), её сценарий и исторические отчёты сохранены;
-характеристики старой записи в `video-report.json` не относятся к новой видеопрезентации.
