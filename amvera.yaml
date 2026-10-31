@@ -10,8 +10,8 @@ build:
 run:
   persistenceMount: /data
   image: null
-  command: python
-  args: /app/scripts/amvera_source_probe.py
+  command: ""
+  args: ""
   containerPort: 80
   singleton: true
   zeroDowntime: false
