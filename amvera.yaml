@@ -1,12 +1,17 @@
+---
 meta:
   environment: docker
   toolchain:
     name: docker
-
+    version: latest
 build:
   dockerfile: deploy/amvera/Dockerfile.standalone
   skip: false
-
 run:
-  containerPort: 80
   persistenceMount: /data
+  image: null
+  command: python
+  args: /app/scripts/amvera_source_probe.py
+  containerPort: 80
+  singleton: true
+  zeroDowntime: false
