@@ -1,4 +1,3 @@
-import { ClipboardCheck } from "lucide-react";
 import { useResource } from "./api";
 import type { Audit as AuditEntry } from "./types";
 import { actionNames, Empty, time } from "./ui";
@@ -6,9 +5,8 @@ export function Audit() {
   const { data, error } = useResource<AuditEntry[]>("/audit");
   return (
     <>
-      <div className="section-heading">
+      <div className="section-heading audit-summary">
         <div>
-          <h2>Журнал действий</h2>
           <p>Кто принял решение и что было выполнено вручную</p>
         </div>
         <span className="subtle">Последние 100 записей</span>
@@ -23,21 +21,17 @@ export function Audit() {
       <div className="audit-list">
         {data?.map((row) => (
           <article key={row.id}>
-            <span className="audit-icon">
-              <ClipboardCheck size={19} />
-            </span>
-            <div>
+            <div className="audit-record">
               <h3>{actionNames[row.action] || row.action}</h3>
-              <p>
-                {row.actor}
-                <span> · {time(row.created_at)}</span>
-              </p>
+              <div className="audit-metadata">
+                <span className="audit-actor">{row.actor}</span>
+                <time dateTime={row.created_at}>{time(row.created_at)}</time>
+              </div>
               {row.comment && <blockquote>{row.comment}</blockquote>}
               {row.incident_id && (
-                <small>Событие · {row.incident_id.slice(0, 8)}</small>
+                <small>Событие: {row.incident_id.slice(0, 8)}</small>
               )}
             </div>
-            <span className="audit-mark">Записано</span>
           </article>
         ))}
       </div>

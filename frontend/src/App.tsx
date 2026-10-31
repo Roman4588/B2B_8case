@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   Activity,
-  BellRing,
   BookOpen,
   ChevronRight,
   CircleHelp,
@@ -9,7 +8,6 @@ import {
   LogOut,
   Radio,
   ShieldCheck,
-  Sparkles,
   Users,
   UserRound,
 } from "lucide-react";
@@ -37,6 +35,14 @@ const pages = [
   { id: "users", title: "Сотрудники", icon: Users },
   { id: "profile", title: "Мой профиль", icon: UserRound },
 ];
+const pageDescriptions: Record<string, string> = {
+  incidents: "Состояние инфраструктуры и решения инженеров",
+  knowledge: "Регламенты команды и поиск инструкций по событию",
+  sources: "Подключение Prometheus и состояние синхронизации",
+  audit: "Решения инженеров и изменения рабочего пространства",
+  users: "Учётные записи и права доступа команды",
+  profile: "Личные данные и безопасность учётной записи",
+};
 
 export default function App() {
   const [operator, setOperator] = useState<Operator | null>(null);
@@ -54,8 +60,8 @@ export default function App() {
   }, []);
   if (checking)
     return (
-      <div className="splash">
-        <Sparkles /> Загружаем рабочее пространство…
+      <div className="splash signalis-auth" role="status">
+        <Activity /> Загружаем рабочее пространство…
       </div>
     );
   if (!operator) return <Login onLogin={setOperator} />;
@@ -66,7 +72,7 @@ export default function App() {
   };
   if (operator.must_change_password)
     return (
-      <main className="password-gate">
+      <main className="password-gate signalis-auth">
         <PasswordChange
           operator={operator}
           onChanged={setOperator}
@@ -102,7 +108,7 @@ function Workspace({
   const source = useResource<Source>("/sources");
   const online = !source.error && source.data?.status === "online";
   return (
-    <div className="app-shell">
+    <div className="app-shell events-screen" data-page={page}>
       <aside className="sidebar">
         <a
           className="brand"
@@ -114,13 +120,14 @@ function Workspace({
         >
           <Brand />
         </a>
-        <div className="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
+        <div className="workspace-label">Мониторинг инфраструктуры</div>
         <nav>
           {pages
             .filter((item) => item.id !== "users" || operator.role === "admin")
             .map((item) => (
               <button
                 key={item.id}
+                aria-current={page === item.id ? "page" : undefined}
                 className={page === item.id ? "active" : ""}
                 onClick={() => setPage(item.id)}
               >
@@ -132,14 +139,6 @@ function Workspace({
               </button>
             ))}
         </nav>
-        <div className="sidebar-note">
-          <Sparkles size={21} />
-          <h3>Ассистент рядом</h3>
-          <p>Поможет разобраться в событии и найти нужную инструкцию.</p>
-          <span>
-            <ShieldCheck size={13} /> Без автономных действий
-          </span>
-        </div>
         <div className="sidebar-bottom">
           <button onClick={() => setHelp(!help)}>
             <CircleHelp size={18} />
@@ -177,7 +176,7 @@ function Workspace({
           </span>
           <div>
             <span className={"connection " + (online ? "online" : "offline")}>
-              <i />
+              <Radio size={14} aria-hidden="true" />
               {source.error
                 ? "Нет связи с приложением"
                 : sourceStatusNames[source.data?.status || "waiting"]}
@@ -200,20 +199,15 @@ function Workspace({
         <main className="main-content">
           <div className="page-intro">
             <div>
-              <span className="eyebrow">B2B-CENTER / СИГНАЛИС</span>
               <h1>
                 {page === "incidents"
-                  ? "Держите ситуацию под контролем."
+                  ? "События"
                   : pages.find((p) => p.id === page)?.title}
               </h1>
-              <p>
-                {page === "incidents"
-                  ? "Сигналы становятся понятными. Решения остаются за вами."
-                  : "Ваше рабочее пространство для спокойной и предсказуемой смены."}
-              </p>
+              <p>{pageDescriptions[page]}</p>
             </div>
             <span className="shift-label">
-              <span />
+              <ShieldCheck size={15} aria-hidden="true" />
               Вы на смене
             </span>
           </div>
@@ -237,28 +231,24 @@ function Workspace({
                   title="Критические"
                   value={summary.data?.critical}
                   tone="red"
-                  icon={<BellRing size={19} />}
                   description="Требуют немедленного внимания"
                 />
                 <Stat
                   title="Предупреждения"
                   value={summary.data?.warning}
                   tone="amber"
-                  icon={<Activity size={19} />}
                   description="Стоит проверить заранее"
                 />
                 <Stat
                   title="Информационные"
                   value={summary.data?.info}
                   tone="blue"
-                  icon={<Radio size={19} />}
                   description="Плановые события и проверки"
                 />
                 <Stat
                   title="Инструкций в базе"
                   value={summary.data?.runbooks}
                   tone="mint"
-                  icon={<BookOpen size={19} />}
                   description="Опыт команды под рукой"
                 />
               </div>
@@ -293,20 +283,17 @@ function Stat({
   title,
   value,
   tone,
-  icon,
   description,
 }: {
   title: string;
   value?: number;
   tone: string;
-  icon: React.ReactNode;
   description: string;
 }) {
   return (
     <article className={"stat " + tone}>
       <div>
         <span>{title}</span>
-        <i>{icon}</i>
       </div>
       <strong>{value ?? "—"}</strong>
       <p>{description}</p>

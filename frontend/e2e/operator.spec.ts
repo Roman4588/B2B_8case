@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
     .fill(process.env.E2E_PASSWORD || "Only-for-tests-2026");
   await page.getByRole("button", { name: "Войти", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Держите ситуацию под контролем." }),
+    page.getByRole("heading", { name: "События", exact: true }),
   ).toBeVisible();
 });
 
@@ -87,7 +87,7 @@ test("knowledge form creates instruction and semantic search finds it", async ({
 test("mobile dashboard has no horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await expect(
-    page.getByRole("heading", { name: "Держите ситуацию под контролем." }),
+    page.getByRole("heading", { name: "События", exact: true }),
   ).toBeVisible();
   expect(
     await page.evaluate(

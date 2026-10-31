@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
-  ArrowUpRight,
   Check,
   ChevronRight,
   Copy,
   Filter,
   Search,
   ShieldCheck,
-  Sparkles,
+  ClipboardList,
+  RefreshCw,
   X,
 } from "lucide-react";
 import { api, useResource } from "./api";
@@ -57,11 +57,10 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
           <h2>
             Лента событий <span className="count">{data?.total ?? "—"}</span>
           </h2>
-          <p>Всё, что требует вашего внимания, в одном месте</p>
         </div>
         <span className="live-label">
-          <i />
-          Автообновление · 5 сек
+          <RefreshCw size={13} aria-hidden="true" />
+          Обновление каждые 5 сек
         </span>
       </div>
       <div className="workspace">
@@ -139,7 +138,16 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
               <button onClick={refresh}>Повторить</button>
             </div>
           )}
-          {!data && !error && <div className="loading">Получаем события…</div>}
+          {!data && !error && (
+            <div className="loading event-loading" role="status">
+              Получаем события…
+              <div className="event-skeleton" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+          )}
           {data && items.length === 0 && (
             <Empty
               title="Здесь спокойно"
@@ -155,9 +163,9 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
                     "event-row " + (selected === item.id ? "selected" : "")
                   }
                   key={item.id}
+                  aria-pressed={selected === item.id}
                   onClick={() => setSelected(item.id)}
                 >
-                  <span className={"event-marker " + item.severity} />
                   <span className="event-content">
                     <span className="event-top">
                       <SeverityBadge value={item.severity} />
@@ -222,23 +230,11 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
             />
           ) : (
             <div className="detail-placeholder">
-              <span className="sparkle-circle">
-                <Sparkles size={28} />
-              </span>
-              <h3>От сигнала к решению</h3>
+              <ClipboardList size={24} aria-hidden="true" />
+              <h3>Выберите событие</h3>
               <p>
                 Выберите событие, чтобы увидеть разбор и подходящие инструкции.
               </p>
-              <div>
-                <span>01</span> Классификация события
-              </div>
-              <div>
-                <span>02</span> Поиск проверенного регламента
-              </div>
-              <div>
-                <span>03</span> Ваше решение и ручное действие
-              </div>
-              <small>ИИ помогает разобраться. Контроль остаётся у вас.</small>
             </div>
           )}
         </aside>
@@ -304,7 +300,7 @@ function Detail({
     <div className="detail-content">
       <div className="detail-toolbar">
         <span>
-          <Sparkles size={15} /> Разбор события
+          <ClipboardList size={15} /> Разбор события
         </span>
         <button
           aria-label="Закрыть событие"
@@ -337,7 +333,7 @@ function Detail({
         </div>
       </div>
       <div className="classification-note">
-        <span className="eyebrow">КЛАССИФИКАЦИЯ</span>
+        <h3>Классификация</h3>
         <p>{item.rationale}</p>
         <span className={"confidence " + (item.needs_review ? "low" : "")}>
           {item.needs_review
@@ -348,7 +344,7 @@ function Detail({
       </div>
       <div className="recommendation-heading">
         <h3>
-          <Sparkles size={17} /> Рекомендации
+          <ClipboardList size={17} /> Рекомендации
         </h3>
         <span>
           {item.recommendation_status === "ready"
@@ -396,13 +392,13 @@ function Detail({
       {(item.recommendation_status === "ready" ? item.recommendations : []).map(
         (rec, index) => (
           <article className="recommendation" key={rec.id}>
+            <h4>{rec.title}</h4>
             <div className="rec-top">
               <span>
-                {index === 0 ? "ЛУЧШЕЕ СОВПАДЕНИЕ" : "ПОХОЖИЙ РЕГЛАМЕНТ"}
+                {index === 0 ? "Лучшее совпадение" : "Похожий регламент"}
               </span>
               <span>{Math.round(rec.similarity * 100)}% сходства</span>
             </div>
-            <h4>{rec.title}</h4>
             <ol>
               {rec.steps.map((step, i) => (
                 <li key={i}>{step}</li>
@@ -411,7 +407,9 @@ function Detail({
             {rec.cautions && <div className="caution">{rec.cautions}</div>}
             <footer>
               <span>
-                Источник: {rec.source} · ред. {rec.revision}
+                Источник: {rec.source}
+                <br />
+                Редакция {rec.revision}
               </span>
               <button
                 className="icon-button"
@@ -491,7 +489,9 @@ function Detail({
             <li key={entry.id}>
               <strong>{actionNames[entry.action] || entry.action}</strong>
               <span>
-                {entry.actor} · {time(entry.created_at)}
+                {entry.actor}
+                <br />
+                {time(entry.created_at)}
               </span>
               {entry.comment && <blockquote>{entry.comment}</blockquote>}
             </li>
@@ -499,7 +499,7 @@ function Detail({
         </ol>
       </section>
       <button className="back-link" onClick={onClose}>
-        <ArrowLeft size={14} /> К списку событий <ArrowUpRight size={13} />
+        <ArrowLeft size={14} /> К списку событий
       </button>
     </div>
   );

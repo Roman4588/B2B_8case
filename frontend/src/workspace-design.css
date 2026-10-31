@@ -1,0 +1,100 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: locked design.md · redesign: full
+ * nav: retained operational sidebar · signature: shared engineer workspace · v2.0.0 */
+/* Hallmark · pre-emit critique: one system across work screens; control borders and readable feedback take priority. */
+.events-screen :is(input, select, textarea) {
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border-color: var(--color-muted);
+  border-radius: var(--radius-card);
+  font-size: 14px;
+}
+.events-screen label {
+  color: var(--color-ink-2);
+  font-size: 13px;
+  font-weight: 400;
+  gap: var(--space-xs);
+}
+.events-screen .primary {
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 13px;
+  font-weight: 600;
+}
+.events-screen .secondary {
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-md);
+  font-size: 13px;
+}
+.events-screen .text-button {
+  min-height: 36px;
+  font-size: 13px;
+}
+.events-screen .subtle {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.events-screen .section-heading p {
+  color: var(--color-muted);
+  font-size: 13px;
+  margin-top: var(--space-2xs);
+  line-height: 1.5;
+}
+.events-screen .error button {
+  min-height: 36px;
+}
+.events-screen .help-banner {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.events-screen .help-banner strong {
+  font-weight: 600;
+}
+.events-screen .error,
+.events-screen .hint {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.events-screen .loading {
+  min-height: 140px;
+}
+.events-screen .empty svg {
+  color: var(--color-muted);
+}
+.events-screen .empty p {
+  max-width: 45ch;
+}
+.events-screen abbr {
+  text-decoration: none;
+}
+.events-screen .safety-note {
+  overflow-wrap: anywhere;
+}
+.events-screen .page-footer {
+  align-items: flex-start;
+  line-height: 1.6;
+}
+.events-screen .page-footer > span:first-child {
+  align-items: flex-start;
+}
+.events-screen .page-footer svg {
+  flex-shrink: 0;
+}
+.signalis-auth.splash {
+  color: var(--color-ink-2);
+  background: var(--color-paper-2);
+  font-family: var(--font-body);
+}
+@media (max-width: 700px) {
+  .events-screen .page-intro p {
+    display: block;
+    margin-top: var(--space-xs);
+    line-height: 1.6;
+  }
+  .events-screen .section-heading {
+    flex-wrap: wrap;
+  }
+  .events-screen .section-heading > .primary {
+    white-space: normal;
+  }
+}

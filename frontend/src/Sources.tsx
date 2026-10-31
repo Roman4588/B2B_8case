@@ -1,19 +1,15 @@
 import { useState } from "react";
-import {
-  Activity,
-  ArrowUpRight,
-  CheckCircle2,
-  FlaskConical,
-  Radio,
-  RefreshCw,
-} from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { api, useResource } from "./api";
 import type { Source } from "./types";
 import { sourceStatusNames, time } from "./ui";
 
 export function Sources() {
   const { data, error, refresh } = useResource<Source>("/sources");
-  const readiness = useResource<{status: string; indexed_runbooks: number}>("/health/ready", 10000);
+  const readiness = useResource<{ status: string; indexed_runbooks: number }>(
+    "/health/ready",
+    10000,
+  );
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   async function sync() {
@@ -44,28 +40,25 @@ export function Sources() {
     }
   }
   return (
-    <>
-      <div className="section-heading">
-        <div>
-          <h2>Источники мониторинга</h2>
-          <p>Состояние подключений и поступление событий</p>
-        </div>
-      </div>
+    <div className="sources-workspace">
       {error && <div className="error">{error}</div>}
       <div className="hint" role="status">
-        API: {data ? "доступен" : "проверяется"}. База знаний: {readiness.data?.status === "ready"
+        API: {data ? "доступен" : "проверяется"}. База знаний:{" "}
+        {readiness.data?.status === "ready"
           ? `готова, инструкций: ${readiness.data.indexed_runbooks}`
-          : "подготовка или нет связи — дождитесь загрузки модели"}.
-        Мониторинг проверяется отдельно ниже.
+          : "подготовка или нет связи — дождитесь загрузки модели"}
+        . Мониторинг проверяется отдельно ниже.
       </div>
       <section className="source-card">
         <header>
-          <span className="prometheus-logo">
-            <Radio size={27} />
-          </span>
           <div>
-            <h3>Prometheus</h3>
-            <p>События через официальный HTTP API</p>
+            <h2>Prometheus</h2>
+            <p>
+              События через официальный{" "}
+              <abbr title="Программный интерфейс по протоколу HTTP">
+                HTTP API
+              </abbr>
+            </p>
           </div>
           <span
             className={
@@ -99,10 +92,7 @@ export function Sources() {
           </div>
         )}
         <footer>
-          <span>
-            <CheckCircle2 size={15} />
-            Повторные события объединяются автоматически
-          </span>
+          <span>Повторные события объединяются автоматически</span>
           <button
             className="secondary"
             disabled={busy}
@@ -115,10 +105,7 @@ export function Sources() {
       </section>
       {data?.demo_mode && (
         <section className="demo-card">
-          <span className="eyebrow">
-            <FlaskConical size={15} /> ДЕМОНСТРАЦИОННЫЙ СТЕНД
-          </span>
-          <h3>Покажите весь путь от сигнала до решения</h3>
+          <h2>Учебный стенд</h2>
           <p>
             Выберите состояние учебной инфраструктуры. Настоящий Prometheus
             обнаружит изменение метрик и передаст события ассистенту.
@@ -128,9 +115,7 @@ export function Sources() {
               className="secondary"
               onClick={() => void scenario("outage")}
             >
-              <Activity size={16} />
               Аварийные события
-              <ArrowUpRight size={14} />
             </button>
             <button
               className="secondary"
@@ -157,13 +142,13 @@ export function Sources() {
         </div>
       )}
       <div className="integration-note">
-        <h3>Подключение своей инфраструктуры</h3>
+        <h2>Подключение своей инфраструктуры</h2>
         <p>
           Стенд готов к подключению внешнего Prometheus. Адрес и токен задаются
-          в настройках запуска — инструкция в README проекта. Аккаунт в облачном
+          в настройках запуска, инструкция в README проекта. Аккаунт в облачном
           сервисе не требуется.
         </p>
       </div>
-    </>
+    </div>
   );
 }

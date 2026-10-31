@@ -1,13 +1,5 @@
 import { useState } from "react";
-import {
-  ArrowRight,
-  Eye,
-  EyeOff,
-  LockKeyhole,
-  Plus,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { Eye, EyeOff, Plus } from "lucide-react";
 import { api, useResource } from "./api";
 
 export type Operator = {
@@ -66,8 +58,8 @@ export function Brand() {
           B<span>2</span>B
         </span>
       </span>
-      <strong>
-        Сигналис<span>B2B-CENTER</span>
+      <strong className="brand-name">
+        Сигналис<span className="brand-name">B2B-CENTER</span>
       </strong>
     </>
   );
@@ -96,44 +88,21 @@ export function Login({ onLogin }: { onLogin: (operator: Operator) => void }) {
     }
   }
   return (
-    <main className="login-page corporate-login">
+    <main className="login-page corporate-login signalis-auth">
       <section className="login-story">
         <div className="brand">
           <Brand />
         </div>
         <div className="login-message">
-          <span className="eyebrow">ИНТЕЛЛЕКТУАЛЬНЫЙ МОНИТОРИНГ</span>
-          <h1>
-            Точный сигнал.
-            <br />
-            <em>Уверенное решение.</em>
-          </h1>
+          <h1>Мониторинг инфраструктуры</h1>
           <p>
-            События инфраструктуры и опыт команды — в рабочем пространстве
-            дежурного инженера.
+            События инфраструктуры, решения дежурного инженера и база знаний
+            команды в одном рабочем пространстве.
           </p>
-          <div className="login-points">
-            <span>
-              <ShieldCheck size={18} /> Решения под вашим контролем
-            </span>
-          </div>
         </div>
-        <div className="signal-art" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-        </div>
-        <span className="login-signature">
-          СИГНАЛИС <span>/</span> РАБОЧЕЕ ПРОСТРАНСТВО КОМАНДЫ
-        </span>
+        <span className="login-signature">Рабочее пространство команды</span>
       </section>
       <section className="login-form">
-        <span className="auth-kicker">
-          <LockKeyhole size={16} /> ЛИЧНЫЙ КАБИНЕТ
-        </span>
         <h2>Добро пожаловать</h2>
         <p>Войдите с учётной записью сотрудника</p>
         <form onSubmit={submit}>
@@ -161,7 +130,6 @@ export function Login({ onLogin }: { onLogin: (operator: Operator) => void }) {
           )}
           <button className="primary" disabled={busy}>
             {busy ? "Входим…" : "Войти"}
-            <ArrowRight size={18} />
           </button>
         </form>
         <p className="access-note">
@@ -219,16 +187,14 @@ export function PasswordChange({
   }
   return (
     <section className="account-panel password-panel">
-      <span className="auth-kicker">
-        <ShieldCheck size={18} /> ЗАЩИТА АККАУНТА
-      </span>
       <h2>
         {operator.must_change_password
           ? "Задайте личный пароль"
-          : "Мой профиль"}
+          : "Смена пароля"}
       </h2>
       <p>
-        {operator.name} · {operator.email}
+        <span>{operator.name}</span>
+        <span>{operator.email}</span>
       </p>
       {operator.must_change_password && (
         <p className="hint">
@@ -327,19 +293,20 @@ export function Employees({ operator }: { operator: Operator }) {
       <div className="employee-list">
         {resource.data?.map((user) => (
           <article className="employee-card" key={user.id}>
-            <span className="employee-avatar">
-              <Users size={22} />
-            </span>
             <div className="employee-info">
               <h3>
                 {user.name}
                 {user.id === operator.id && <small>Вы</small>}
               </h3>
               <p>{user.email}</p>
-              <span>
-                {user.role === "admin" ? "Администратор" : "Инженер"} ·{" "}
-                {user.is_active ? "Доступ открыт" : "Доступ отключён"}
-              </span>
+              <div className="employee-meta">
+                <span>
+                  {user.role === "admin" ? "Администратор" : "Инженер"}
+                </span>
+                <span>
+                  {user.is_active ? "Доступ открыт" : "Доступ отключён"}
+                </span>
+              </div>
               {user.must_change_password && user.is_active && (
                 <small>Ожидается смена временного пароля</small>
               )}
@@ -377,7 +344,8 @@ export function Employees({ operator }: { operator: Operator }) {
                 : "Включить доступ?"}
             </h2>
             <p>
-              {statusTarget.name} · {statusTarget.email}
+              <span>{statusTarget.name}</span>
+              <span>{statusTarget.email}</span>
             </p>
             <p>
               {statusTarget.is_active
@@ -467,7 +435,8 @@ function UserEditor({
         <h2>{user === "new" ? "Новый сотрудник" : "Сброс пароля"}</h2>
         {user !== "new" && (
           <p>
-            {user.name} · {user.email}
+            <span>{user.name}</span>
+            <span>{user.email}</span>
           </p>
         )}
         <form className="account-form" onSubmit={submit}>

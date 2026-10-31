@@ -47,11 +47,11 @@ export function Knowledge() {
     }
   }
   return (
-    <>
+    <div className="knowledge-screen">
       <div className="section-heading">
         <div>
           <h2>
-            База знаний{" "}
+            Инструкции{" "}
             <span className="count">{books.data?.items.length ?? "—"}</span>
           </h2>
           <p>Проверенные инструкции вашей команды</p>
@@ -63,17 +63,21 @@ export function Knowledge() {
       </div>
       <div className="knowledge-intro">
         <div>
-          <span className="eyebrow">ЕСЛИ СОБЫТИЕ → ДЕЙСТВИЕ</span>
-          <h3>Опыт команды, доступный в нужный момент</h3>
+          <h3>Импорт инструкций</h3>
           <p>
             Загрузите регламенты. Ассистент найдёт подходящий по смыслу события
-            — на русском и английском.
+            на русском и английском.
           </p>
         </div>
         <label className={"upload-button " + (uploading ? "disabled" : "")}>
           <UploadCloud size={23} />
           <strong>{uploading ? "Загрузка…" : "Загрузить документ"}</strong>
-          <span>JSON, MD, TXT, PDF, DOCX · до 25 МБ</span>
+          <span>
+            <abbr title="Поддерживаемые форматы документов">
+              JSON, MD, TXT, PDF, DOCX
+            </abbr>
+            , до 25 МБ
+          </span>
           <input
             type="file"
             accept=".json,.md,.txt,.pdf,.docx"
@@ -171,10 +175,8 @@ export function Knowledge() {
       <div className="book-grid">
         {books.data?.items.map((book) => (
           <article className="book" key={book.id}>
+            <h3>{book.title}</h3>
             <header>
-              <span className="book-icon">
-                <FileText size={20} />
-              </span>
               <span className="category-label">
                 {categoryNames[book.category]}
               </span>
@@ -184,7 +186,6 @@ export function Knowledge() {
                   : `${Math.round((book.similarity || 0) * 100)}% сходства`}
               </span>
             </header>
-            <h3>{book.title}</h3>
             <p>{book.condition}</p>
             <div className="book-steps">
               <span>{book.steps.length} шага</span>
@@ -225,7 +226,7 @@ export function Knowledge() {
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -269,9 +270,9 @@ function BookEditor({
     }
   }
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay knowledge-editor-overlay" onClick={onClose}>
       <section
-        className="modal"
+        className="modal knowledge-editor"
         role="dialog"
         aria-modal="true"
         aria-label="Инструкция"
