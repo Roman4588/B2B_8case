@@ -1,0 +1,17 @@
+{
+  "base_url": "https://b2b-madaminchyk.mia0.amvera.tech",
+  "passed": true,
+  "source_commit": "5488bed7e0306e3fd04e46e96f03235b7526061e",
+  "live_http": 200,
+  "ready": {
+    "status": "ready",
+    "indexed_runbooks": 134
+  },
+  "engineer_login": true,
+  "engineer_users_http": 403,
+  "session_cookie_secure_httponly_samesite_strict": true,
+  "prometheus_online_and_advancing": true,
+  "semantic_search": true,
+  "recommendations_with_sources": true,
+  "observed_utc": "2026-10-31T04:49:53Z"
+}

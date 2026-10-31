@@ -1,7 +1,7 @@
 {
-  "accounts_and_regulations_preserved": true,
-  "passed": true,
-  "file_count": 4,
+  "legacy_sqlite_unchanged": true,
+  "file_count": 13,
   "upload_files_preserved": true,
-  "legacy_sqlite_unchanged": true
+  "passed": true,
+  "accounts_and_regulations_preserved": true
 }

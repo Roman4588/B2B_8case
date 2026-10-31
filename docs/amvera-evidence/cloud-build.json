@@ -1,0 +1,11 @@
+{
+  "source_commit": "5488bed7e0306e3fd04e46e96f03235b7526061e",
+  "image_digest": "sha256:a5e25ab261858a6c3b08541cf36f62b662a4b5b4b5c8ceded242afb940158e19",
+  "build_exit_code": 0,
+  "github_ci": "success",
+  "github_ci_url": "https://github.com/Roman4588/B2B_8case/actions/runs/41169643273/job/124444605697",
+  "normal_docker_cmd": "python -m app.processes standalone",
+  "temporary_probe_entrypoint_removed": true,
+  "replicas": 1,
+  "autoscaling": false
+}

@@ -1,0 +1,9 @@
+{
+  "application_log_records_reviewed": 300,
+  "application_error_matches": 0,
+  "application_first_record_time": "31/10/26 11:49:03",
+  "application_last_record_time": "31/10/26 11:51:59",
+  "scope": "Recent final normal application run; deliberate source-outage window excluded",
+  "system_log_available": false,
+  "system_log_response": "No records returned by Amvera"
+}

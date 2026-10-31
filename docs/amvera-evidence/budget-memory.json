@@ -1,6 +1,6 @@
 {
+  "memory_peak_bytes": 996151296,
+  "cpu_limit": 0.5,
   "memory_limit_bytes": 996147200,
-  "oom_killed": false,
-  "memory_peak_bytes": 996147200,
-  "cpu_limit": 0.5
+  "oom_killed": false
 }

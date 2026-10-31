@@ -1,0 +1,9 @@
+{
+  "base_url": "https://b2b-madaminchyk.mia0.amvera.tech",
+  "passed": true,
+  "source_status": "error",
+  "observed_utc": "2026-10-31T04:39:23Z",
+  "demo_http_status": 503,
+  "preserved_error_message": true,
+  "indexed_runbooks": 134
+}

@@ -1,0 +1,22 @@
+{
+  "base_url": "https://b2b-madaminchyk.mia0.amvera.tech",
+  "checks": {
+    "login": true,
+    "real_alert_and_recommendations": true,
+    "manual_confirmation_and_idempotence": true,
+    "sixty_page_pdf_background_import": true,
+    "logout": true,
+    "engineer_has_no_admin_access": true,
+    "session_after_page_request": true,
+    "prometheus_poll_timestamp_advances": true,
+    "scenario_changes_prometheus_events": true,
+    "manual_completion_audit_and_idempotence": true,
+    "json_worker_import_and_paraphrased_search": true,
+    "narrative_markdown_one_runbook": true
+  },
+  "pdf_upload_response_seconds": 0.346,
+  "pdf_processing_seconds": 9.5,
+  "import_job_id": "d466755d-9139-4e17-a941-f93be5799e91",
+  "indexed_runbooks": 133,
+  "demonstration_engineer_email": "reviewer-4e19a611@example.org"
+}
