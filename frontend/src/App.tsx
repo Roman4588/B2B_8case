@@ -264,7 +264,7 @@ function Workspace({
           {page === "profile" && (
             <PasswordChange operator={operator} onChanged={onProfile} />
           )}
-          <footer className="page-footer">
+          {page === "incidents" && <footer className="page-footer">
             <span>
               <ShieldCheck size={14} /> Только рекомендации. Все действия
               выполняет инженер.
@@ -272,7 +272,7 @@ function Workspace({
             <span>
               Последняя синхронизация: {time(source.data?.state?.last_success)}
             </span>
-          </footer>
+          </footer>}
         </main>
       </div>
     </div>

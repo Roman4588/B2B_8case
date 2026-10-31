@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   FileText,
   Plus,
@@ -17,11 +17,24 @@ export function Knowledge() {
   const [editing, setEditing] = useState<Runbook | null | undefined>(undefined);
   const [notice, setNotice] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
+  const uploadBusy = useRef(false);
   const books = useResource<{ items: Runbook[]; semantic: boolean }>(
     "/runbooks?q=" + encodeURIComponent(query),
   );
   const jobs = useResource<Job[]>("/jobs");
   async function upload(file: File) {
+    if (uploadBusy.current) return;
+    if (!/\.(json|md|txt|pdf|docx)$/i.test(file.name)) {
+      setNotice("Поддерживаются JSON, MD, TXT, PDF и DOCX.");
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      setNotice("Размер документа не должен превышать 25 МБ.");
+      return;
+    }
+    uploadBusy.current = true;
     setUploading(true);
     setNotice("");
     const body = new FormData();
@@ -35,6 +48,7 @@ export function Knowledge() {
     } catch (e) {
       setNotice((e as Error).message);
     } finally {
+      uploadBusy.current = false;
       setUploading(false);
     }
   }
@@ -61,11 +75,39 @@ export function Knowledge() {
           Добавить инструкцию
         </button>
       </div>
-      <div className="knowledge-intro">
+      <div
+        className={"knowledge-intro" + (dragging ? " drag-over" : "")}
+        onDragEnter={(e) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          dragDepth.current += 1;
+          setDragging(true);
+        }}
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = uploadBusy.current ? "none" : "copy";
+        }}
+        onDragLeave={() => {
+          dragDepth.current = Math.max(0, dragDepth.current - 1);
+          if (!dragDepth.current) setDragging(false);
+        }}
+        onDrop={(e) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          dragDepth.current = 0;
+          setDragging(false);
+          if (e.dataTransfer.files.length !== 1) {
+            setNotice("Перетащите один документ за раз.");
+            return;
+          }
+          void upload(e.dataTransfer.files[0]);
+        }}
+      >
         <div>
           <h3>Импорт инструкций</h3>
           <p>
-            Загрузите регламенты. Ассистент найдёт подходящий по смыслу события
+            Перетащите документ в эту область или выберите файл. Ассистент найдёт подходящий по смыслу события
             на русском и английском.
           </p>
         </div>
