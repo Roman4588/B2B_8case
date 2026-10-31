@@ -3,7 +3,6 @@ import {
   Activity,
   BookOpen,
   ChevronRight,
-  CircleHelp,
   ClipboardList,
   LogOut,
   Radio,
@@ -16,6 +15,7 @@ import { Incidents } from "./Incidents";
 import { Knowledge } from "./Knowledge";
 import { Sources } from "./Sources";
 import { Audit } from "./Audit";
+import { HelpPopover } from "./HelpPopover";
 import { sourceStatusNames } from "./ui";
 import type { Source, Summary } from "./types";
 import { time } from "./ui";
@@ -103,7 +103,6 @@ function Workspace({
   onLogout: () => void;
 }) {
   const [page, setPage] = useState("incidents");
-  const [help, setHelp] = useState(false);
   const summary = useResource<Summary>("/summary");
   const source = useResource<Source>("/sources");
   const online = !source.error && source.data?.status === "online";
@@ -140,10 +139,7 @@ function Workspace({
             ))}
         </nav>
         <div className="sidebar-bottom">
-          <button onClick={() => setHelp(!help)}>
-            <CircleHelp size={18} />
-            Как это работает
-          </button>
+          <HelpPopover />
           <div>
             <span className="avatar">
               {operator.name
@@ -211,19 +207,6 @@ function Workspace({
               Вы на смене
             </span>
           </div>
-          {help && (
-            <div className="help-banner">
-              <strong>Как устроена работа</strong>
-              <p>
-                Откройте событие → прочитайте классификацию и регламент →
-                примите решение → выполните действие самостоятельно → отметьте
-                результат. В «Источниках» можно переключить учебный сценарий.
-              </p>
-              <button className="text-button" onClick={() => setHelp(false)}>
-                Понятно
-              </button>
-            </div>
-          )}
           {page === "incidents" && (
             <>
               <div className="stats-grid">

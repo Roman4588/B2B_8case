@@ -42,13 +42,19 @@ export function Sources() {
   return (
     <div className="sources-workspace">
       {error && <div className="error">{error}</div>}
-      <div className="hint" role="status">
-        API: {data ? "доступен" : "проверяется"}. База знаний:{" "}
-        {readiness.data?.status === "ready"
-          ? `готова, инструкций: ${readiness.data.indexed_runbooks}`
-          : "подготовка или нет связи — дождитесь загрузки модели"}
-        . Мониторинг проверяется отдельно ниже.
-      </div>
+      {readiness.error ? (
+        <div className="error" role="alert">
+          Не удалось проверить базу знаний.
+        </div>
+      ) : readiness.data?.status === "ready" ? (
+        <p className="knowledge-count">
+          Инструкций в базе: <strong>{readiness.data.indexed_runbooks}</strong>
+        </p>
+      ) : (
+        <p className="subtle" role="status">
+          База знаний подготавливается…
+        </p>
+      )}
       <section className="source-card">
         <header>
           <div>

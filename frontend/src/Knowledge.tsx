@@ -11,6 +11,7 @@ import {
 import { api, useResource } from "./api";
 import type { Job, Runbook } from "./types";
 import { categoryNames, Empty, jobNames } from "./ui";
+import { ShowMore } from "./ShowMore";
 
 export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
   const [deleting, setDeleting] = useState<{
@@ -22,6 +23,8 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
   const [deleteError, setDeleteError] = useState("");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
+  const [visibleBooks, setVisibleBooks] = useState(10);
+  const [visibleJobs, setVisibleJobs] = useState(10);
   const [editing, setEditing] = useState<Runbook | null | undefined>(undefined);
   const [notice, setNotice] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -176,9 +179,9 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
         </div>
       )}
       {!!jobs.data?.length && (
-        <section className="jobs">
+        <section className="jobs" id="knowledge-import-list">
           <h3>Обработка документов</h3>
-          {jobs.data.map((job) => (
+          {jobs.data.slice(0, visibleJobs).map((job) => (
             <div className="job" key={job.id}>
               <FileText size={18} />
               <span>
@@ -217,12 +220,20 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
               )}
             </div>
           ))}
+          <ShowMore
+            shown={visibleJobs}
+            total={jobs.data.length}
+            onMore={() => setVisibleJobs((n) => n + 10)}
+            label="Показать ещё документы"
+            controls="knowledge-import-list"
+          />
         </section>
       )}
       <form
         className="knowledge-search"
         onSubmit={(e) => {
           e.preventDefault();
+          setVisibleBooks(10);
           setQuery(q);
         }}
       >
@@ -243,6 +254,7 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
             onClick={() => {
               setQuery("");
               setQ("");
+              setVisibleBooks(10);
             }}
           >
             Сбросить
@@ -267,8 +279,8 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
           description="Добавьте новый регламент или попробуйте другое описание проблемы."
         />
       )}
-      <div className="book-grid">
-        {books.data?.items.map((book) => (
+      <div className="book-grid" id="knowledge-book-list">
+        {books.data?.items.slice(0, visibleBooks).map((book) => (
           <article className="book" key={book.id}>
             <h3>{book.title}</h3>
             <header>
@@ -320,6 +332,13 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
           </article>
         ))}
       </div>
+      <ShowMore
+        shown={visibleBooks}
+        total={books.data?.items.length ?? 0}
+        onMore={() => setVisibleBooks((n) => n + 10)}
+        label="Показать ещё инструкции"
+        controls="knowledge-book-list"
+      />
       {editing !== undefined && (
         <BookEditor
           book={editing}
