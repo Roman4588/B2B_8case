@@ -12,8 +12,6 @@
 
 ![Рабочее пространство](docs/media/dashboard.png)
 
-**[Актуальный релиз v1.1.0](https://github.com/Roman4588/B2B_8case/releases/tag/v1.1.0)** · **[Полный чек-лист кейса 8](docs/submission-verification.md)**
-
 ## Для проверяющих: вход без установки
 
 1. Откройте **[публичный сайт «Сигналис»](https://b2b-madaminchyk.mia0.amvera.tech/)**.
@@ -63,7 +61,6 @@ docker compose exec api python -m app.manage create-admin
 **[Проверка за 5–7 минут](docs/reviewer-guide.md)** ·
 **[Тестовый документ](examples/reviewer-queue.json)** ·
 **[Видео команды](docs/media/signalis-presentation.mp4)** ·
-**[Отчёт проверки](docs/submission-verification.md)**.
 
 Остановка без удаления данных: `docker compose down`.
 Не добавляйте `-v`: это удалит тома с данными.
