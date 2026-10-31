@@ -1,0 +1,230 @@
+/* Hallmark · shape: app screen · theme: locked design.md · scope: incident detail
+ * signature: readable instructions with a persistent engineer decision · v2.0.0 */
+/* Hallmark · pre-emit critique: controls stay reachable; every recommendation and history entry remains in the reading region. */
+.events-screen .detail-panel.has-selection {
+  max-height: none;
+  overflow-x: clip;
+  overflow-y: auto;
+  scrollbar-gutter: auto;
+}
+.events-screen .incident-detail {
+  display: flex;
+  flex-direction: column;
+  height: clamp(400px, calc(100dvh - 380px), 760px);
+  min-height: 0;
+}
+.events-screen .incident-detail > .detail-toolbar,
+.events-screen .incident-detail > .detail-title,
+.events-screen .incident-detail > .manual-controls {
+  flex-shrink: 0;
+}
+.events-screen .incident-detail > .detail-toolbar {
+  min-height: 40px;
+  padding: var(--space-2xs) var(--space-md);
+}
+.events-screen .incident-detail > .detail-title {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-rule);
+}
+.events-screen .incident-detail .detail-title h2 {
+  font-size: 18px;
+  line-height: 1.35;
+  margin: var(--space-xs) 0;
+}
+.events-screen .incident-detail .detail-title > p {
+  line-height: 1.5;
+  margin: 0;
+}
+.events-screen .incident-detail .detail-facts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+.events-screen .incident-detail .detail-facts strong {
+  margin-top: var(--space-3xs);
+}
+.events-screen .incident-reading {
+  flex: 1 1 auto;
+  min-height: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.events-screen .incident-reading:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -3px;
+}
+.events-screen .incident-description {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+.events-screen .incident-reading .classification-note {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-2xs) var(--space-xs);
+  margin: 0 var(--space-md);
+  padding: var(--space-sm) 0;
+  border: 0;
+}
+.events-screen .classification-explanation {
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-ink-2);
+}
+.events-screen .classification-explanation summary {
+  cursor: pointer;
+  min-height: 32px;
+  display: list-item;
+  padding-block: var(--space-2xs);
+}
+.events-screen .classification-explanation summary:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.events-screen .incident-reading .classification-note p {
+  font-size: 13px;
+  margin: var(--space-xs) 0;
+}
+.events-screen .incident-reading .classification-note small {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.events-screen .incident-detail .recommendation-heading {
+  padding: var(--space-xs) var(--space-md);
+}
+.events-screen .incident-detail .recommendation {
+  margin-inline: var(--space-md);
+  padding-block: var(--space-sm);
+}
+.events-screen .incident-detail .recommendation ol {
+  margin-block: var(--space-sm);
+}
+.events-screen .incident-detail .recommendation li {
+  margin-block: var(--space-xs);
+}
+.events-screen .incident-detail .incident-history {
+  padding: var(--space-md);
+}
+.events-screen .incident-detail .back-link {
+  margin: 0 var(--space-md) var(--space-sm);
+}
+.events-screen .incident-detail > .manual-controls {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--color-rule);
+  background: var(--color-paper-2);
+}
+.events-screen .decision-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-xs);
+  margin-bottom: var(--space-xs);
+}
+.events-screen .incident-detail .manual-controls h3 {
+  font-size: 14px;
+}
+.events-screen .incident-detail .current-state {
+  margin: 0;
+}
+.events-screen .decision-comment {
+  position: relative;
+}
+.events-screen .decision-comment > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: clip;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.events-screen .incident-detail .manual-controls textarea {
+  min-height: 40px;
+  height: 40px;
+  max-height: 100px;
+  resize: vertical;
+  padding: var(--space-xs) var(--space-sm);
+}
+.events-screen .incident-detail .actions {
+  margin-top: var(--space-xs);
+}
+.events-screen .incident-detail .actions button {
+  min-height: 40px;
+  padding: var(--space-xs) var(--space-sm);
+}
+.events-screen .incident-detail .safety-note {
+  margin-top: var(--space-xs);
+  line-height: 1.45;
+}
+.events-screen .incident-detail .manual-controls .hint {
+  margin: var(--space-xs) 0 0;
+  padding: var(--space-xs);
+  font-size: 12px;
+}
+@media (min-width: 1600px) {
+  .events-screen .incident-detail {
+    height: clamp(400px, calc(100dvh - 420px), 760px);
+  }
+}
+@media (max-width: 1100px) and (min-width: 701px) {
+  .events-screen .incident-detail {
+    height: min(760px, calc(100dvh - 48px));
+  }
+}
+@media (max-width: 700px) {
+  .events-screen .detail-panel.has-selection {
+    padding: 0;
+    overflow-x: clip;
+    overflow-y: auto;
+  }
+  .events-screen .incident-detail {
+    height: 100dvh;
+  }
+  .events-screen .incident-detail > .detail-toolbar {
+    position: static;
+  }
+  .events-screen .incident-detail .detail-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xs) var(--space-md);
+  }
+  .events-screen .incident-reading .classification-note {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .events-screen .incident-reading .confidence {
+    justify-self: start;
+  }
+  .events-screen .incident-detail .actions .primary {
+    flex-basis: 100%;
+    white-space: normal;
+  }
+  .events-screen .incident-detail .actions .secondary {
+    flex: 1;
+  }
+  .events-screen .incident-detail .safety-note {
+    font-size: 12px;
+  }
+}
+@media (max-height: 650px) {
+  .events-screen .detail-panel.has-selection {
+    max-height: calc(100dvh - var(--space-md));
+    overflow-y: auto;
+  }
+  .events-screen .incident-detail {
+    height: auto;
+  }
+  .events-screen .incident-reading {
+    overflow: visible;
+    flex: 0 0 auto;
+  }
+  .events-screen .incident-detail > .detail-toolbar {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-raised);
+  }
+}

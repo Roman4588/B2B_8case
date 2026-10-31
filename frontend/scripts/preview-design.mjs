@@ -159,7 +159,11 @@ let signedIn = true;
 const server = await createServer({
   configFile: fileURLToPath(new URL("../vite.config.ts", import.meta.url)),
   root: fileURLToPath(new URL("../", import.meta.url)),
-  server: { host: "127.0.0.1", port: 5173, strictPort: true },
+  server: {
+    host: "127.0.0.1",
+    port: Number(process.env.PREVIEW_PORT || 5173),
+    strictPort: true,
+  },
   plugins: [
     {
       name: "local-design-preview",

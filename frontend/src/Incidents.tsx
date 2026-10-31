@@ -297,7 +297,7 @@ function Detail({
   if (error) return <div className="error">{error}</div>;
   if (!item) return <div className="loading">Разбираем событие…</div>;
   return (
-    <div className="detail-content">
+    <div className="detail-content incident-detail">
       <div className="detail-toolbar">
         <span>
           <ClipboardList size={15} /> Разбор события
@@ -313,7 +313,6 @@ function Detail({
       <div className="detail-title">
         <SeverityBadge value={item.severity} />
         <h2>{item.title}</h2>
-        <p>{item.description}</p>
         <div className="detail-facts">
           <span>
             Хост<strong>{item.host}</strong>
@@ -332,65 +331,76 @@ function Detail({
           </span>
         </div>
       </div>
-      <div className="classification-note">
-        <h3>Классификация</h3>
-        <p>{item.rationale}</p>
-        <span className={"confidence " + (item.needs_review ? "low" : "")}>
-          {item.needs_review
-            ? "Нужна ручная проверка"
-            : "Автоматический разбор"}
-        </span>
-        <small>Проверьте вывод перед выполнением действий.</small>
-      </div>
-      <div className="recommendation-heading">
-        <h3>
-          <ClipboardList size={17} /> Рекомендации
-        </h3>
-        <span>
-          {item.recommendation_status === "ready"
-            ? item.recommendations.length
-            : "—"}
-        </span>
-      </div>
-      {item.recommendation_status === "pending" && (
-        <div className="hint">
-          Ищем подходящие регламенты. При первом запуске загружается локальная
-          модель.
+      <div
+        className="incident-reading"
+        role="region"
+        aria-label="Разбор и рекомендации"
+        tabIndex={0}
+      >
+        <div className="classification-note">
+          <details className="classification-explanation">
+            <summary>Обоснование классификации</summary>
+            <p>{item.rationale}</p>
+          </details>
+          <span className={"confidence " + (item.needs_review ? "low" : "")}>
+            {item.needs_review
+              ? "Нужна ручная проверка"
+              : "Автоматический разбор"}
+          </span>
+          <small>Проверьте вывод перед выполнением действий.</small>
         </div>
-      )}
-      {item.recommendation_status === "ready" &&
-        !item.recommendations.length && (
+        <p className="incident-description">{item.description}</p>
+        <div className="recommendation-heading">
+          <h3>
+            <ClipboardList size={17} /> Рекомендации
+          </h3>
+          <span>
+            {item.recommendation_status === "ready"
+              ? item.recommendations.length
+              : "—"}
+          </span>
+        </div>
+        {item.recommendation_status === "pending" && (
           <div className="hint">
-            Близких инструкций нет. Проверьте событие вручную или добавьте
-            регламент в базу знаний.
+            Ищем подходящие регламенты. При первом запуске загружается локальная
+            модель.
           </div>
         )}
-      {item.recommendation_status === "failed" && (
-        <div className="error" role="alert">
-          Не удалось подобрать инструкции. Проверьте событие вручную или
-          повторите поиск.
-          <button
-            disabled={busy || item.lifecycle !== "firing"}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await api("/incidents/" + id + "/recommendations/retry", {
-                  method: "POST",
-                });
-                refresh();
-              } catch (err) {
-                setMessage((err as Error).message);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Повторить поиск
-          </button>
-        </div>
-      )}
-      {(item.recommendation_status === "ready" ? item.recommendations : []).map(
-        (rec, index) => (
+        {item.recommendation_status === "ready" &&
+          !item.recommendations.length && (
+            <div className="hint">
+              Близких инструкций нет. Проверьте событие вручную или добавьте
+              регламент в базу знаний.
+            </div>
+          )}
+        {item.recommendation_status === "failed" && (
+          <div className="error" role="alert">
+            Не удалось подобрать инструкции. Проверьте событие вручную или
+            повторите поиск.
+            <button
+              disabled={busy || item.lifecycle !== "firing"}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await api("/incidents/" + id + "/recommendations/retry", {
+                    method: "POST",
+                  });
+                  refresh();
+                } catch (err) {
+                  setMessage((err as Error).message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Повторить поиск
+            </button>
+          </div>
+        )}
+        {(item.recommendation_status === "ready"
+          ? item.recommendations
+          : []
+        ).map((rec, index) => (
           <article className="recommendation" key={rec.id}>
             <h4>{rec.title}</h4>
             <div className="rec-top">
@@ -420,14 +430,46 @@ function Detail({
               </button>
             </footer>
           </article>
-        ),
-      )}
+        ))}
+        <section className="incident-history" aria-label="История решений">
+          <h3>История решений</h3>
+          <p>Действия инженера по этому эпизоду аварии</p>
+          {history.error && (
+            <div className="error" role="alert">
+              {history.error}
+            </div>
+          )}
+          {!history.data && !history.error && (
+            <p role="status">Загружаем историю…</p>
+          )}
+          {history.data?.length === 0 && <p>Решений пока нет.</p>}
+          <ol>
+            {history.data?.map((entry) => (
+              <li key={entry.id}>
+                <strong>{actionNames[entry.action] || entry.action}</strong>
+                <span>
+                  {entry.actor}
+                  <br />
+                  {time(entry.created_at)}
+                </span>
+                {entry.comment && <blockquote>{entry.comment}</blockquote>}
+              </li>
+            ))}
+          </ol>
+        </section>
+        <button className="back-link" onClick={onClose}>
+          <ArrowLeft size={14} /> К списку событий
+        </button>
+      </div>
       <div className="manual-controls">
-        <h3>Решение инженера</h3>
-        <p className="current-state">{handlingNames[item.handling]}</p>
-        <label>
-          Комментарий
+        <div className="decision-heading">
+          <h3>Решение инженера</h3>
+          <p className="current-state">{handlingNames[item.handling]}</p>
+        </div>
+        <label className="decision-comment">
+          <span>Комментарий</span>
           <textarea
+            rows={1}
             placeholder="Что проверили или планируете сделать…"
             maxLength={2000}
             value={comment}
@@ -472,35 +514,6 @@ function Detail({
         )}
         <SafetyNote />
       </div>
-      <section className="incident-history" aria-label="История решений">
-        <h3>История решений</h3>
-        <p>Действия инженера по этому эпизоду аварии</p>
-        {history.error && (
-          <div className="error" role="alert">
-            {history.error}
-          </div>
-        )}
-        {!history.data && !history.error && (
-          <p role="status">Загружаем историю…</p>
-        )}
-        {history.data?.length === 0 && <p>Решений пока нет.</p>}
-        <ol>
-          {history.data?.map((entry) => (
-            <li key={entry.id}>
-              <strong>{actionNames[entry.action] || entry.action}</strong>
-              <span>
-                {entry.actor}
-                <br />
-                {time(entry.created_at)}
-              </span>
-              {entry.comment && <blockquote>{entry.comment}</blockquote>}
-            </li>
-          ))}
-        </ol>
-      </section>
-      <button className="back-link" onClick={onClose}>
-        <ArrowLeft size={14} /> К списку событий
-      </button>
     </div>
   );
 }

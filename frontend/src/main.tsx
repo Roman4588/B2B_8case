@@ -9,6 +9,7 @@ import "./accounts-design.css";
 import "./knowledge-design.css";
 import "./operations-design.css";
 import "./input-interactions.css";
+import "./incident-panel.css";
 
 // Text fields match :focus-visible even after a click. Track Tab separately so
 // pointer focus does not leave frames, while keyboard users retain an indicator.
