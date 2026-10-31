@@ -255,7 +255,9 @@ function Workspace({
               <Incidents onChanged={summary.refresh} />
             </>
           )}
-          {page === "knowledge" && <Knowledge />}
+          {page === "knowledge" && (
+            <Knowledge canDelete={operator.role === "admin"} />
+          )}
           {page === "sources" && <Sources />}
           {page === "audit" && <Audit />}
           {page === "users" && operator.role === "admin" && (
@@ -264,15 +266,18 @@ function Workspace({
           {page === "profile" && (
             <PasswordChange operator={operator} onChanged={onProfile} />
           )}
-          {page === "incidents" && <footer className="page-footer">
-            <span>
-              <ShieldCheck size={14} /> Только рекомендации. Все действия
-              выполняет инженер.
-            </span>
-            <span>
-              Последняя синхронизация: {time(source.data?.state?.last_success)}
-            </span>
-          </footer>}
+          {page === "incidents" && (
+            <footer className="page-footer">
+              <span>
+                <ShieldCheck size={14} /> Только рекомендации. Все действия
+                выполняет инженер.
+              </span>
+              <span>
+                Последняя синхронизация:{" "}
+                {time(source.data?.state?.last_success)}
+              </span>
+            </footer>
+          )}
         </main>
       </div>
     </div>

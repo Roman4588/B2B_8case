@@ -47,7 +47,7 @@ def process_import(db, job_id: str):
 
 def _process_import(db, job_id: str):
     job = db.scalar(select(ImportJob).where(ImportJob.id == job_id).with_for_update())
-    if job is None or job.status in {"succeeded", "running"}:
+    if job is None or job.status in {"succeeded", "running", "deleted"}:
         return
     job.status, job.updated_at, job.error = "running", utcnow(), ""
     db.commit()

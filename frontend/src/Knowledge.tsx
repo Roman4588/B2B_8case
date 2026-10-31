@@ -6,12 +6,20 @@ import {
   Search,
   UploadCloud,
   X,
+  Trash2,
 } from "lucide-react";
 import { api, useResource } from "./api";
 import type { Job, Runbook } from "./types";
 import { categoryNames, Empty, jobNames } from "./ui";
 
-export function Knowledge() {
+export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
+  const [deleting, setDeleting] = useState<{
+    kind: "book" | "job";
+    id: string;
+    name: string;
+  } | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Runbook | null | undefined>(undefined);
@@ -24,6 +32,36 @@ export function Knowledge() {
     "/runbooks?q=" + encodeURIComponent(query),
   );
   const jobs = useResource<Job[]>("/jobs");
+  function askDelete(kind: "book" | "job", id: string, name: string) {
+    setDeleteError("");
+    setDeleting({ kind, id, name });
+  }
+  async function remove() {
+    if (!deleting || deleteBusy) return;
+    setDeleteBusy(true);
+    setDeleteError("");
+    try {
+      const result = await api<{
+        deleted_instructions: number;
+        file_cleanup_pending?: boolean;
+      }>((deleting.kind === "book" ? "/runbooks/" : "/jobs/") + deleting.id, {
+        method: "DELETE",
+      });
+      books.refresh();
+      jobs.refresh();
+      setEditing(undefined);
+      setDeleting(null);
+      setNotice(
+        result.file_cleanup_pending
+          ? "Инструкции удалены. Очистка исходного файла не завершена — сообщите администратору."
+          : `Удалено инструкций: ${result.deleted_instructions}. Изменение записано в журнал.`,
+      );
+    } catch (e) {
+      setDeleteError((e as Error).message);
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
   async function upload(file: File) {
     if (uploadBusy.current) return;
     if (!/\.(json|md|txt|pdf|docx)$/i.test(file.name)) {
@@ -107,8 +145,8 @@ export function Knowledge() {
         <div>
           <h3>Импорт инструкций</h3>
           <p>
-            Перетащите документ в эту область или выберите файл. Ассистент найдёт подходящий по смыслу события
-            на русском и английском.
+            Перетащите документ в эту область или выберите файл. Ассистент
+            найдёт подходящий по смыслу события на русском и английском.
           </p>
         </div>
         <label className={"upload-button " + (uploading ? "disabled" : "")}>
@@ -160,6 +198,21 @@ export function Knowledge() {
                   onClick={() => void retryJob(job.id)}
                 >
                   <RefreshCw size={16} />
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  className="icon-button"
+                  aria-label={"Удалить документ " + job.filename}
+                  disabled={job.status === "running"}
+                  title={
+                    job.status === "running"
+                      ? "Дождитесь завершения обработки"
+                      : "Удалить файл и все его инструкции"
+                  }
+                  onClick={() => askDelete("job", job.id, job.filename)}
+                >
+                  <Trash2 size={16} />
                 </button>
               )}
             </div>
@@ -254,6 +307,15 @@ export function Knowledge() {
               <button className="text-button" onClick={() => setEditing(book)}>
                 Открыть
               </button>
+              {canDelete && (
+                <button
+                  className="text-button"
+                  aria-label={"Удалить инструкцию " + book.title}
+                  onClick={() => askDelete("book", book.id, book.title)}
+                >
+                  Удалить
+                </button>
+              )}
             </footer>
           </article>
         ))}
@@ -267,6 +329,54 @@ export function Knowledge() {
             books.refresh();
           }}
         />
+      )}
+      {deleting && (
+        <div
+          className="confirm-access"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-instruction-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && !deleteBusy) setDeleting(null);
+          }}
+        >
+          <section className="account-panel">
+            <h2 id="delete-instruction-title">
+              {deleting.kind === "job"
+                ? "Удалить документ?"
+                : "Удалить инструкцию?"}
+            </h2>
+            <p>{deleting.name}</p>
+            <p>
+              {deleting.kind === "job"
+                ? "Будут удалены исходный файл и все инструкции из этого импорта."
+                : "Инструкция исчезнет из базы знаний и поиска."}{" "}
+              Восстановить удаление нельзя. Запись в журнале сохранится.
+            </p>
+            {deleteError && (
+              <div className="error" role="alert">
+                {deleteError}
+              </div>
+            )}
+            <div className="dialog-actions">
+              <button
+                className="secondary"
+                autoFocus
+                disabled={deleteBusy}
+                onClick={() => setDeleting(null)}
+              >
+                Отмена
+              </button>
+              <button
+                className="primary"
+                disabled={deleteBusy}
+                onClick={() => void remove()}
+              >
+                {deleteBusy ? "Удаление…" : "Удалить"}
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );

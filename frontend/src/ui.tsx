@@ -46,10 +46,13 @@ export const actionNames: Record<string, string> = {
   dismiss: "Рекомендация отклонена",
   runbook_create: "Добавлена инструкция",
   runbook_update: "Обновлена инструкция",
+  runbook_delete: "Удалена инструкция",
+  document_delete: "Удалён импортированный документ",
   document_upload: "Загружен документ",
   demo_scenario: "Изменён учебный сценарий",
 };
 export const jobNames: Record<string, string> = {
+  deleted: "Удалено",
   queued: "В очереди",
   running: "Обработка",
   succeeded: "Готово",

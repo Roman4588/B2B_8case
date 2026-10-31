@@ -6,15 +6,16 @@ from urllib.parse import urlsplit
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text
 
 from app.accounts import router as accounts_router
-from app.auth import require_operator
+from app.auth import require_admin, require_operator
 from app.config import settings
 from app.db import get_db
 from app.documents import RunbookInput
 from app.models import (
     AuditEntry,
+    Chunk,
     ImportJob,
     Incident,
     Runbook,
@@ -219,6 +220,23 @@ def update_runbook(book_id: str, body: RunbookInput, operator=Depends(require_op
     return public(book)
 
 
+@app.delete("/api/runbooks/{book_id}")
+def delete_runbook(book_id: str, operator=Depends(require_admin), db=Depends(get_db)):
+    book = db.scalar(select(Runbook).where(Runbook.id == book_id).with_for_update())
+    if book is None:
+        raise HTTPException(404, "Инструкция не найдена")
+    if book.content_key:
+        job = db.get(ImportJob, book.content_key.split(":", 1)[0])
+        if job and job.status in {"queued", "running"}:
+            raise HTTPException(409, "Дождитесь завершения импорта документа")
+    db.add(AuditEntry(actor=operator.name, action="runbook_delete", comment=book.title))
+    db.execute(delete(Chunk).where(Chunk.runbook_id == book.id))
+    db.delete(book)
+    invalidate_recommendations(db)
+    db.commit()
+    return {"deleted_instructions": 1}
+
+
 @app.post("/api/runbooks/{book_id}/retry", status_code=202)
 def retry_book(book_id: str, operator=Depends(require_operator), db=Depends(get_db)):
     book = db.get(Runbook, book_id)
@@ -253,8 +271,47 @@ async def upload(file: UploadFile = File(...), operator=Depends(require_operator
 @app.get("/api/jobs")
 def jobs(operator=Depends(require_operator), db=Depends(get_db)):
     return [
-        public(row) for row in db.scalars(select(ImportJob).order_by(ImportJob.created_at.desc()).limit(30))
+        public(row) for row in db.scalars(select(ImportJob).where(ImportJob.status != "deleted").order_by(ImportJob.created_at.desc()).limit(30))
     ]
+
+
+@app.delete("/api/jobs/{job_id}")
+def delete_import(job_id: str, operator=Depends(require_admin), db=Depends(get_db)):
+    job = db.scalar(select(ImportJob).where(ImportJob.id == job_id).with_for_update())
+    if job is None:
+        raise HTTPException(404, "Документ не найден")
+    if job.status == "running":
+        raise HTTPException(409, "Документ обрабатывается. Дождитесь завершения и повторите удаление")
+    path = Path(job.path).resolve()
+    if not path.is_relative_to(settings().upload_dir.resolve()):
+        raise HTTPException(409, "Путь файла вне каталога загрузок. Требуется проверка администратора")
+    staged = path.with_name(path.name + ".deleting")
+    if path.exists():
+        try:
+            path.rename(staged)
+        except OSError as exc:
+            raise HTTPException(409, "Файл занят или недоступен. Повторите удаление позже") from exc
+    try:
+        ids = list(db.scalars(select(Runbook.id).where(Runbook.content_key.startswith(job.id + ":", autoescape=True))))
+        if ids:
+            db.execute(delete(Chunk).where(Chunk.runbook_id.in_(ids)))
+            db.execute(delete(Runbook).where(Runbook.id.in_(ids)))
+        if job.status != "deleted":
+            db.add(AuditEntry(actor=operator.name, action="document_delete", comment=f"{job.filename}: {len(ids)} инструкций"))
+        job.status, job.error = "deleted", ""
+        invalidate_recommendations(db)
+        db.commit()
+    except Exception:
+        db.rollback()
+        if staged.exists():
+            staged.rename(path)
+        raise
+    cleanup_pending = False
+    try:
+        staged.unlink(missing_ok=True)
+    except OSError:
+        cleanup_pending = True
+    return {"deleted_instructions": len(ids), "file_cleanup_pending": cleanup_pending}
 
 
 @app.get("/api/jobs/{job_id}")
