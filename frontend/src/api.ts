@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export async function api<T>(
   path: string,
@@ -58,6 +58,19 @@ export function useResource<T>(path: string, interval = 5000) {
   const [record, setRecord] = useState<{ path: string; value: T } | null>(null);
   const [error, setError] = useState("");
   const [tick, setTick] = useState(0);
+  const version = useRef(0);
+  const update = useCallback(
+    (change: (current: T) => T) => {
+      version.current += 1;
+      setRecord((current) =>
+        current?.path === path
+          ? { path, value: change(current.value) }
+          : current,
+      );
+      setError("");
+    },
+    [path],
+  );
   const refresh = useCallback(() => setTick((value) => value + 1), []);
   useEffect(() => {
     let active = true;
@@ -66,9 +79,10 @@ export function useResource<T>(path: string, interval = 5000) {
     async function load() {
       if (inFlight) return;
       inFlight = true;
+      const startedVersion = version.current;
       try {
         const value = await api<T>(path, { signal: controller.signal });
-        if (active) {
+        if (active && startedVersion === version.current) {
           setRecord({ path, value });
           setError("");
         }
@@ -89,5 +103,10 @@ export function useResource<T>(path: string, interval = 5000) {
       if (timer) clearInterval(timer);
     };
   }, [path, interval, tick]);
-  return { data: record?.path === path ? record.value : null, error, refresh };
+  return {
+    data: record?.path === path ? record.value : null,
+    error,
+    refresh,
+    update,
+  };
 }

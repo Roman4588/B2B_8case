@@ -178,6 +178,12 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
           {notice}
         </div>
       )}
+      {jobs.error && (
+        <div className="error" role="alert">
+          {jobs.error}
+          <button onClick={jobs.refresh}>Повторить загрузку документов</button>
+        </div>
+      )}
       {!!jobs.data?.length && (
         <section className="jobs" id="knowledge-import-list">
           <h3>Обработка документов</h3>
@@ -191,6 +197,13 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
                     `${job.progress} / ${job.total || "…"} инструкций`}
                 </small>
               </span>
+              {["queued", "running"].includes(job.status) && (
+                <progress
+                  aria-label={"Обработка " + job.filename}
+                  value={job.total ? job.progress : undefined}
+                  max={job.total || 1}
+                />
+              )}
               <span className={"job-status " + job.status}>
                 {jobNames[job.status]}
               </span>
@@ -240,7 +253,7 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
         <label className="search">
           <Search size={18} />
           <input
-            placeholder="Опишите проблему — поиск по смыслу"
+            placeholder="Опишите проблему для поиска по смыслу"
             aria-label="Поиск регламентов"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -264,6 +277,7 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
       {books.error && (
         <div className="error" role="alert">
           {books.error}
+          <button onClick={books.refresh}>Повторить</button>
         </div>
       )}
       {!books.data && !books.error && (
@@ -294,6 +308,11 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
               </span>
             </header>
             <p>{book.condition}</p>
+            <p className="usefulness-summary">
+              <span>Помогла: {book.helpful_count ?? 0}</span>
+              <span>Не помогла: {book.not_helpful_count ?? 0}</span>
+              <small>По всем редакциям регламента</small>
+            </p>
             <div className="book-steps">
               <span>{book.steps.length} шага</span>
               <span>Редакция {book.revision || 1}</span>

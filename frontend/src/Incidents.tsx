@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   Check,
@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { api, useResource } from "./api";
+import { ClassificationEditor, RecommendationRating } from "./EngineerFeedback";
 import type { Audit, Incident } from "./types";
 import {
   actionNames,
@@ -33,6 +34,56 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
   const [handling, setHandling] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string | null>(null);
+  const selectedRow = useRef<HTMLButtonElement | null>(null);
+  const detailPanel = useRef<HTMLElement | null>(null);
+  const closeDetail = () => {
+    setSelected(null);
+    selectedRow.current?.focus({ preventScroll: true });
+  };
+  useEffect(() => {
+    if (!selected) return;
+    const narrow = window.matchMedia("(max-width: 1100px)");
+    const syncLock = () =>
+      document.body.classList.toggle("incident-overlay-open", narrow.matches);
+    syncLock();
+    narrow.addEventListener("change", syncLock);
+    detailPanel.current?.focus({ preventScroll: true });
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Tab" && narrow.matches && detailPanel.current) {
+        const controls = Array.from(
+          detailPanel.current.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]',
+          ),
+        ).filter((element) => element.getClientRects().length > 0);
+        const first = controls[0];
+        const last = controls.at(-1);
+        const active = document.activeElement;
+        if (
+          event.shiftKey &&
+          (active === first || active === detailPanel.current)
+        ) {
+          event.preventDefault();
+          last?.focus();
+        } else if (
+          !event.shiftKey &&
+          (active === last || !detailPanel.current.contains(active))
+        ) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        setSelected(null);
+        selectedRow.current?.focus({ preventScroll: true });
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => {
+      document.body.classList.remove("incident-overlay-open");
+      narrow.removeEventListener("change", syncLock);
+      window.removeEventListener("keydown", escape);
+    };
+  }, [selected]);
   const params = new URLSearchParams({
     q,
     severity,
@@ -164,7 +215,10 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
                   }
                   key={item.id}
                   aria-pressed={selected === item.id}
-                  onClick={() => setSelected(item.id)}
+                  onClick={(event) => {
+                    selectedRow.current = event.currentTarget;
+                    setSelected(item.id);
+                  }}
                 >
                   <span className="event-content">
                     <span className="event-top">
@@ -177,6 +231,13 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
                       <time>{time(item.first_seen)}</time>
                     </span>
                     <strong>{item.title}</strong>
+                    {item.classification_correction && (
+                      <small className="correction-marker">
+                        Исправлено инженером:{" "}
+                        {item.classification_correction.actor},{" "}
+                        {time(item.classification_correction.updated_at)}
+                      </small>
+                    )}
                     <span className="event-meta">
                       <span>
                         <Icon size={13} />
@@ -217,12 +278,17 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
             </span>
           </div>
         </section>
-        <aside className={"detail-panel " + (selected ? "has-selection" : "")}>
+        <aside
+          ref={detailPanel}
+          tabIndex={-1}
+          aria-label="Карточка события"
+          className={"detail-panel " + (selected ? "has-selection" : "")}
+        >
           {selected ? (
             <Detail
               key={selected}
               id={selected}
-              onClose={() => setSelected(null)}
+              onClose={closeDetail}
               onChanged={() => {
                 refresh();
                 onChanged();
@@ -256,6 +322,7 @@ function Detail({
     data: item,
     error,
     refresh,
+    update,
   } = useResource<Incident>("/incidents/" + id);
   const history = useResource<Audit[]>("/incidents/" + id + "/history");
   const [comment, setComment] = useState("");
@@ -294,10 +361,22 @@ function Detail({
       setMessage("Копирование недоступно. Выделите текст инструкции вручную.");
     }
   }
-  if (error) return <div className="error">{error}</div>;
+  if (error && !item)
+    return (
+      <div className="error" role="alert">
+        {error}
+        <button onClick={refresh}>Повторить</button>
+      </div>
+    );
   if (!item) return <div className="loading">Разбираем событие…</div>;
   return (
     <div className="detail-content incident-detail">
+      {error && (
+        <div className="error incident-refresh-error" role="alert">
+          <span>{error}</span>
+          <button onClick={refresh}>Повторить обновление</button>
+        </div>
+      )}
       <div className="detail-toolbar">
         <span>
           <ClipboardList size={15} /> Разбор события
@@ -310,7 +389,12 @@ function Detail({
           <X size={19} />
         </button>
       </div>
-      <div className="detail-title">
+      <div
+        className="detail-title"
+        tabIndex={0}
+        role="region"
+        aria-label="Сведения о событии"
+      >
         <SeverityBadge value={item.severity} />
         <h2>{item.title}</h2>
         <div className="detail-facts">
@@ -337,19 +421,76 @@ function Detail({
         aria-label="Разбор и рекомендации"
         tabIndex={0}
       >
+        <p className="incident-description">{item.description}</p>
         <div className="classification-note">
+          {item.classification_correction && (
+            <div className="classification-correction">
+              <strong>Исправлено инженером</strong>
+              <span>
+                {item.classification_correction.actor},{" "}
+                {time(item.classification_correction.updated_at)}
+              </span>
+            </div>
+          )}
           <details className="classification-explanation">
-            <summary>Обоснование классификации</summary>
-            <p>{item.rationale}</p>
+            <summary>
+              {item.classification_correction
+                ? "Автоматическая классификация отдельно"
+                : "Обоснование классификации"}
+            </summary>
+            <p>{item.automatic_classification?.rationale || item.rationale}</p>
+            {item.classification_correction &&
+              item.automatic_classification && (
+                <>
+                  <p>
+                    {item.automatic_classification.severity} ·{" "}
+                    {categoryNames[item.automatic_classification.category]} ·{" "}
+                    {item.automatic_classification.priority}
+                  </p>
+                  <p>
+                    Уверенность автоматической модели:{" "}
+                    {item.automatic_classification.confidence}. Она не относится
+                    к ручному решению.
+                  </p>
+                </>
+              )}
           </details>
           <span className={"confidence " + (item.needs_review ? "low" : "")}>
-            {item.needs_review
-              ? "Нужна ручная проверка"
-              : "Автоматический разбор"}
+            {item.classification_correction
+              ? "Решение инженера"
+              : item.needs_review
+                ? "Нужна ручная проверка"
+                : "Автоматический разбор"}
           </span>
           <small>Проверьте вывод перед выполнением действий.</small>
+          <ClassificationEditor
+            item={item}
+            onSaved={(updated) => {
+              update((current) => {
+                if (
+                  current.classification_correction &&
+                  updated.classification_correction &&
+                  current.classification_correction.updated_at >
+                    updated.classification_correction.updated_at
+                )
+                  return current;
+                return {
+                  ...current,
+                  severity: updated.severity,
+                  category: updated.category,
+                  priority: updated.priority,
+                  confidence: updated.confidence,
+                  needs_review: updated.needs_review,
+                  rationale: updated.rationale,
+                  classification_correction: updated.classification_correction,
+                };
+              });
+              refresh();
+              history.refresh();
+              onChanged();
+            }}
+          />
         </div>
-        <p className="incident-description">{item.description}</p>
         <div className="recommendation-heading">
           <h3>
             <ClipboardList size={17} /> Рекомендации
@@ -401,13 +542,28 @@ function Detail({
           ? item.recommendations
           : []
         ).map((rec, index) => (
-          <article className="recommendation" key={rec.id}>
+          <article
+            className="recommendation"
+            key={`${rec.id}:${rec.revision}:${item.recommendation_generation}`}
+          >
             <h4>{rec.title}</h4>
             <div className="rec-top">
               <span>
                 {index === 0 ? "Лучшее совпадение" : "Похожий регламент"}
               </span>
               <span>{Math.round(rec.similarity * 100)}% сходства</span>
+            </div>
+            <div className="recommendation-explanation">
+              <p>Условие: {rec.condition}</p>
+              <p>
+                {rec.matched_terms?.length
+                  ? `Совпавшие слова: ${rec.matched_terms.join(", ")}`
+                  : "Прямых совпадений содержательных слов нет."}
+              </p>
+              <small>
+                {rec.explanation ||
+                  "Сходство текстов не является вероятностью правильности рекомендации."}
+              </small>
             </div>
             <ol>
               {rec.steps.map((step, i) => (
@@ -429,6 +585,32 @@ function Detail({
                 {copied ? <Check size={16} /> : <Copy size={16} />}
               </button>
             </footer>
+            <RecommendationRating
+              incidentId={id}
+              rec={rec}
+              generation={item.recommendation_generation}
+              onSaved={(feedback) => {
+                update((current) =>
+                  current.recommendation_generation !==
+                  item.recommendation_generation
+                    ? current
+                    : {
+                        ...current,
+                        recommendations: current.recommendations.map((value) =>
+                          value.id === rec.id &&
+                          value.revision === rec.revision &&
+                          (!value.feedback ||
+                            Date.parse(value.feedback.updated_at) <=
+                              Date.parse(feedback.updated_at))
+                            ? { ...value, feedback }
+                            : value,
+                        ),
+                      },
+                );
+                refresh();
+                history.refresh();
+              }}
+            />
           </article>
         ))}
         <section className="incident-history" aria-label="История решений">

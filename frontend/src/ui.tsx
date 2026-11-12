@@ -35,6 +35,8 @@ export const handlingNames: Record<string, string> = {
   dismissed: "Отклонено",
 };
 export const actionNames: Record<string, string> = {
+  classification_corrected: "Исправлена классификация",
+  recommendation_feedback: "Оценена полезность рекомендации",
   user_created: "Создан сотрудник",
   user_enabled: "Доступ включён",
   user_disabled: "Доступ отключён",
