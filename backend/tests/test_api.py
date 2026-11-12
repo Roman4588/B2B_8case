@@ -100,7 +100,13 @@ def test_compact_search_runs_in_worker_without_loading_local_model(client, monke
     )
     response = http.get("/api/runbooks", params={"q": "Заказы стоят"})
     assert response.status_code == 200
-    assert response.json() == {"items": expected, "semantic": True}
+    assert response.json() == {
+        "items": [
+            {**item, "helpful_count": 0, "not_helpful_count": 0, "usefulness_scope": "all_revisions"}
+            for item in expected
+        ],
+        "semantic": True,
+    }
 
 
 def test_compact_search_worker_timeout_is_explicit_error(client, monkeypatch):

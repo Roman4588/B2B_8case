@@ -2,7 +2,18 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -89,6 +100,50 @@ class AuditEntry(Base):
     incident_id: Mapped[str | None] = mapped_column(String(36))
     comment: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    operator_id: Mapped[str | None] = mapped_column(ForeignKey("operators.id"))
+    details: Mapped[dict | None] = mapped_column(JSON)
+
+
+class ClassificationCorrection(Base):
+    __tablename__ = "classification_corrections"
+    __table_args__ = (
+        UniqueConstraint("incident_id", name="uq_correction_incident"),
+        CheckConstraint("severity IN ('critical','warning','info')", name="ck_correction_severity"),
+        CheckConstraint(
+            "category IN ('server','network','database','application')", name="ck_correction_category"
+        ),
+        CheckConstraint("priority IN ('P1','P2','P3','P4')", name="ck_correction_priority"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.id"), nullable=False)
+    operator_id: Mapped[str] = mapped_column(ForeignKey("operators.id"), nullable=False)
+    actor: Mapped[str] = mapped_column(String(120))
+    severity: Mapped[str] = mapped_column(String(16))
+    category: Mapped[str] = mapped_column(String(16))
+    priority: Mapped[str] = mapped_column(String(3))
+    comment: Mapped[str] = mapped_column(Text, default="")
+    input_snapshot: Mapped[dict] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class RecommendationFeedback(Base):
+    __tablename__ = "recommendation_feedback"
+    __table_args__ = (
+        UniqueConstraint("operator_id", "incident_id", "runbook_id", "revision", name="uq_feedback_unit"),
+        CheckConstraint("revision > 0", name="ck_feedback_revision"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.id"), nullable=False)
+    # Historical identity survives deletion; the shown recommendation is frozen below.
+    # A live FK would block the existing single/bulk instruction deletion APIs.
+    runbook_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    operator_id: Mapped[str] = mapped_column(ForeignKey("operators.id"), nullable=False)
+    actor: Mapped[str] = mapped_column(String(120))
+    revision: Mapped[int] = mapped_column(Integer)
+    generation: Mapped[int] = mapped_column(Integer)
+    helpful: Mapped[bool] = mapped_column(Boolean)
+    recommendation_snapshot: Mapped[dict] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class SourceState(Base):

@@ -1,11 +1,11 @@
-from datetime import UTC, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 from sqlalchemy import delete, func, select, text
 
 from app.accounts import router as accounts_router
@@ -13,11 +13,15 @@ from app.auth import require_admin, require_operator
 from app.config import settings
 from app.db import get_db
 from app.documents import RunbookInput
+from app.explanations import explain
+from app.feedback import effective, save_correction, save_feedback, usefulness_counts
 from app.models import (
     AuditEntry,
     Chunk,
+    ClassificationCorrection,
     ImportJob,
     Incident,
+    RecommendationFeedback,
     Runbook,
     SourceState,
     uid,
@@ -47,7 +51,57 @@ async def origin_and_security(request: Request, call_next):
 
 
 def public(row):
-    return jsonable_encoder({c.name: getattr(row, c.name) for c in row.__table__.columns})
+    values = {
+        c.name: getattr(row, c.name)
+        for c in row.__table__.columns
+        if not (isinstance(row, ImportJob) and c.name == "path")
+    }
+    # SQLite drops timezone info; all application timestamps are UTC.
+    return jsonable_encoder(
+        {
+            key: value.replace(tzinfo=UTC) if isinstance(value, datetime) and value.tzinfo is None else value
+            for key, value in values.items()
+        }
+    )
+
+
+def incident_public(db, row, operator=None):
+    result = public(row)
+    result["automatic_classification"] = {
+        key: result[key]
+        for key in ("severity", "category", "priority", "confidence", "needs_review", "rationale")
+    }
+    correction = db.scalar(
+        select(ClassificationCorrection).where(ClassificationCorrection.incident_id == row.id)
+    )
+    result["classification_correction"] = None
+    if correction:
+        result["classification_correction"] = {
+            key: value for key, value in public(correction).items() if key != "input_snapshot"
+        }
+        for key in ("severity", "category", "priority"):
+            result[key] = getattr(correction, key)
+        result.update(confidence=None, needs_review=False, rationale="Исправлено инженером")
+    if operator:
+        feedback = {
+            (entry.runbook_id, entry.revision): public(entry)
+            for entry in db.scalars(
+                select(RecommendationFeedback).where(
+                    RecommendationFeedback.incident_id == row.id,
+                    RecommendationFeedback.operator_id == operator.id,
+                )
+            )
+        }
+        # Never mutate the persisted JSON snapshots while decorating a response.
+        result["recommendations"] = [
+            {
+                **rec,
+                **explain(f"{row.title}. {row.description}", rec.get("condition", "")),
+                "feedback": feedback.get((rec["id"], rec.get("revision"))),
+            }
+            for rec in result["recommendations"]
+        ]
+    return result
 
 
 @app.get("/api/health/live")
@@ -95,7 +149,10 @@ def incidents(
         ("handling", handling),
     ):
         if value:
-            stmt = stmt.where(getattr(Incident, name) == value)
+            stmt = stmt.where(
+                (effective(name) if name in {"severity", "category", "priority"} else getattr(Incident, name))
+                == value
+            )
     if q:
         escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         stmt = stmt.where(
@@ -104,20 +161,21 @@ def incidents(
         )
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))
     rows = db.scalars(
-        stmt.order_by(Incident.lifecycle, Incident.priority, Incident.last_seen.desc())
+        stmt.order_by(Incident.lifecycle, effective("priority"), Incident.last_seen.desc())
         .offset((page - 1) * 50)
         .limit(50)
     ).all()
-    return {"items": [public(row) for row in rows], "total": total, "page": page}
+    return {"items": [incident_public(db, row) for row in rows], "total": total, "page": page}
 
 
 @app.get("/api/summary")
 def summary(operator=Depends(require_operator), db=Depends(get_db)):
     counts = dict(
         db.execute(
-            select(Incident.severity, func.count())
+            select(effective("severity"), func.count())
+            .select_from(Incident)
             .where(Incident.lifecycle == "firing")
-            .group_by(Incident.severity)
+            .group_by(effective("severity"))
         ).all()
     )
     return {
@@ -138,7 +196,40 @@ def incident_detail(incident_id: str, operator=Depends(require_operator), db=Dep
     item = db.get(Incident, incident_id)
     if item is None:
         raise HTTPException(404, "Событие не найдено")
-    return public(item)
+    return incident_public(db, item, operator)
+
+
+class CorrectionInput(BaseModel):
+    severity: Literal["critical", "warning", "info"]
+    category: Literal["server", "network", "database", "application"]
+    priority: Literal["P1", "P2", "P3", "P4"]
+    comment: str = Field(default="", max_length=2000)
+
+
+@app.put("/api/incidents/{incident_id}/classification")
+def correct_classification(
+    incident_id: str, body: CorrectionInput, operator=Depends(require_operator), db=Depends(get_db)
+):
+    item = save_correction(db, incident_id, operator, body.model_dump())
+    return incident_public(db, item, operator)
+
+
+class FeedbackInput(BaseModel):
+    helpful: StrictBool
+    revision: int = Field(gt=0, strict=True)
+    generation: int = Field(ge=0, strict=True)
+
+
+@app.put("/api/incidents/{incident_id}/recommendations/{book_id}/feedback")
+def rate_recommendation(
+    incident_id: str,
+    book_id: str,
+    body: FeedbackInput,
+    operator=Depends(require_operator),
+    db=Depends(get_db),
+):
+    row = save_feedback(db, incident_id, book_id, operator, body.helpful, body.revision, body.generation)
+    return {key: value for key, value in public(row).items() if key != "recommendation_snapshot"}
 
 
 @app.get("/api/incidents/{incident_id}/history")
@@ -162,7 +253,9 @@ class ActionInput(BaseModel):
 @app.post("/api/incidents/{incident_id}/actions")
 def action(incident_id: str, body: ActionInput, operator=Depends(require_operator), db=Depends(get_db)):
     try:
-        return public(manual_action(db, incident_id, body.action, operator.name, body.comment))
+        return incident_public(
+            db, manual_action(db, incident_id, body.action, operator.name, body.comment), operator
+        )
     except LookupError as exc:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
@@ -171,6 +264,15 @@ def action(incident_id: str, body: ActionInput, operator=Depends(require_operato
 
 @app.get("/api/runbooks")
 def runbooks(q: str = "", operator=Depends(require_operator), db=Depends(get_db)):
+    counts = usefulness_counts(db)
+
+    def with_counts(book):
+        return {
+            **book,
+            **counts.get(book["id"], {"helpful_count": 0, "not_helpful_count": 0}),
+            "usefulness_scope": "all_revisions",
+        }
+
     if q.strip():
         if len(q) > 1000:
             raise HTTPException(422, "Запрос слишком длинный")
@@ -182,15 +284,16 @@ def runbooks(q: str = "", operator=Depends(require_operator), db=Depends(get_db)
 
                 result = semantic_search.delay(q, 20)
                 try:
-                    return {"items": result.get(timeout=20), "semantic": True}
+                    return {"items": [with_counts(book) for book in result.get(timeout=20)], "semantic": True}
                 finally:
                     result.forget()
-            return {"items": search_runbooks(db, q, 20), "semantic": True}
+            return {"items": [with_counts(book) for book in search_runbooks(db, q, 20)], "semantic": True}
         except Exception as exc:
             raise HTTPException(503, "Модель поиска недоступна. Проверьте состояние базы знаний") from exc
     return {
         "items": [
-            public(row) for row in db.scalars(select(Runbook).order_by(Runbook.created_at.desc()).limit(500))
+            with_counts(public(row))
+            for row in db.scalars(select(Runbook).order_by(Runbook.created_at.desc()).limit(500))
         ],
         "semantic": False,
     }
@@ -271,7 +374,13 @@ async def upload(file: UploadFile = File(...), operator=Depends(require_operator
 @app.get("/api/jobs")
 def jobs(operator=Depends(require_operator), db=Depends(get_db)):
     return [
-        public(row) for row in db.scalars(select(ImportJob).where(ImportJob.status != "deleted").order_by(ImportJob.created_at.desc()).limit(30))
+        public(row)
+        for row in db.scalars(
+            select(ImportJob)
+            .where(ImportJob.status != "deleted")
+            .order_by(ImportJob.created_at.desc())
+            .limit(30)
+        )
     ]
 
 
@@ -292,12 +401,22 @@ def delete_import(job_id: str, operator=Depends(require_admin), db=Depends(get_d
         except OSError as exc:
             raise HTTPException(409, "Файл занят или недоступен. Повторите удаление позже") from exc
     try:
-        ids = list(db.scalars(select(Runbook.id).where(Runbook.content_key.startswith(job.id + ":", autoescape=True))))
+        ids = list(
+            db.scalars(
+                select(Runbook.id).where(Runbook.content_key.startswith(job.id + ":", autoescape=True))
+            )
+        )
         if ids:
             db.execute(delete(Chunk).where(Chunk.runbook_id.in_(ids)))
             db.execute(delete(Runbook).where(Runbook.id.in_(ids)))
         if job.status != "deleted":
-            db.add(AuditEntry(actor=operator.name, action="document_delete", comment=f"{job.filename}: {len(ids)} инструкций"))
+            db.add(
+                AuditEntry(
+                    actor=operator.name,
+                    action="document_delete",
+                    comment=f"{job.filename}: {len(ids)} инструкций",
+                )
+            )
         job.status, job.error = "deleted", ""
         invalidate_recommendations(db)
         db.commit()
@@ -324,7 +443,13 @@ def job_detail(job_id: str, operator=Depends(require_operator), db=Depends(get_d
 
 @app.post("/api/jobs/{job_id}/retry", status_code=202)
 def retry_job(job_id: str, operator=Depends(require_operator), db=Depends(get_db)):
-    job = db.get(ImportJob, job_id)
+    # Serialize with cancellation/deletion and re-read any ORM-cached state.
+    job = db.scalar(
+        select(ImportJob)
+        .where(ImportJob.id == job_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if job is None:
         raise HTTPException(404, "Задание не найдено")
     if job.status != "failed":
@@ -405,7 +530,9 @@ def demo(body: DemoInput, operator=Depends(require_operator), db=Depends(get_db)
             settings().demo_exporter_url + "/scenario", json=body.model_dump(), timeout=5
         ).raise_for_status()
     except httpx.HTTPError as exc:
-        raise HTTPException(503, "Учебный источник недоступен. Проверьте demo-exporter и Prometheus.") from exc
+        raise HTTPException(
+            503, "Учебный источник недоступен. Проверьте demo-exporter и Prometheus."
+        ) from exc
     db.add(AuditEntry(actor=operator.name, action="demo_scenario", comment=body.scenario))
     db.commit()
     return {"status": "ok", "detail": "Меняются только демонстрационные метрики"}
