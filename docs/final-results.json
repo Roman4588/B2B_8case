@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-12",
+  "timezone": "Asia/Tomsk",
+  "git_base": "875dfc8b7f91f26016d87bc0c301556312dcbdb2",
+  "branch": "codex/engineer-feedback",
+  "local_only": true,
+  "backend": {
+    "passed": 107,
+    "skipped": 0,
+    "seconds": 135.34,
+    "database": "acceptance_test",
+    "postgresql": true,
+    "pgvector": true
+  },
+  "browser": {
+    "engine": "Chromium/msedge",
+    "retries": 0,
+    "runs": [
+      {
+        "passed": 35,
+        "failed": 0,
+        "duration": "6.5m"
+      },
+      {
+        "passed": 35,
+        "failed": 0,
+        "duration": "2.4m"
+      }
+    ],
+    "widths": [
+      1440,
+      1024,
+      768,
+      390
+    ]
+  },
+  "frontend": {
+    "build": true,
+    "js": "index-3J0oRspu.js",
+    "css": "index-F1HcKL2i.css",
+    "local_matches_container": true
+  },
+  "clean_start": {
+    "new_volumes": true,
+    "downloaded_model": true,
+    "copied_model_cache": false,
+    "minutes_approx": 16,
+    "docker_layers_were_cached": true,
+    "fully_cold_images_not_measured": true
+  },
+  "pdf": {
+    "pages": 60,
+    "http_status": 202,
+    "response_seconds": 0.056,
+    "processing_seconds": 12.14
+  },
+  "live_extra": {
+    "engineer_roles": true,
+    "edit_and_search": true,
+    "real_queue_failure_retry": true,
+    "delete": true
+  },
+  "persistence_after_docker_restart": {
+    "login": true,
+    "old_correction": true,
+    "audit": true,
+    "pdf60_job": true,
+    "search_ready": true
+  },
+  "seed_runbooks_after_repeats": 10,
+  "historical_feedback_for_deleted_runbooks": 4,
+  "correction_examples": 2,
+  "benchmark_report": "final-benchmark.json",
+  "correction_report": "final-correction-metrics.json",
+  "empty_report": "final-empty-metrics.json",
+  "limitations": [
+    "original organizer specification not found",
+    "independent benchmark unavailable",
+    "offline operation not certified",
+    "video predates A/B",
+    "old QA services remain stopped after automatic policy rejected restoration"
+  ],
+  "known_functional_blockers": []
+}

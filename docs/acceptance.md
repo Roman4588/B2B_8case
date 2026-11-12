@@ -1,39 +1,36 @@
-# Соответствие требованиям кейса 8
+# Матрица приёмки на 13 ноября 2026
 
-Повторная проверка после PR №1 и последующих исправлений: [24–27 октября 2026](review-2026-10-27.md).
-Результаты ниже относятся к первоначальной сдаче; актуальные метрики и дополнительные регрессии
-приведены в новом отчёте.
+## Источники и границы
 
-Источник: предоставленная презентация, слайды 30–32 и общие требования слайдов 5–7.
-Слайд 28 с пометкой «Задача 8» находится внутри раздела аудитора безопасности и по
-содержанию относится к кейсу 7. Для кейса 8 использованы его название, workflow и
-критерии на слайдах 30–32.
+Первичный документ дополнительных требований прочитан целиком: `14. Дополнительные_задачи_Задача_8_переформулировано.docx` из предоставленного пути Downloads; неизменённая копия включена в комплект как [requirements-additional.docx](requirements-additional.docx). Задачи A/B ниже основаны на нём; уточняющие проверки — на задании финальной приёмки.
+Исходного ТЗ/презентации организаторов в репозитории не найдено. Прежняя версия этого файла ссылалась на слайды 30–32 и 5–7. Утверждения о пороге 90%, видео, стеке и документе >50 страниц считаются утверждениями README/старых отчётов, а не независимо сверенными требованиями оригинала. Независимый корпус организаторов отсутствует.
 
-| Требование | Что реализовано | Проверка |
-|---|---|---|
-| Подключение к Zabbix или Prometheus | Настоящий Prometheus в Compose; клиент Alerts HTTP API | Сквозной HTTP-тест получает реальные firing alerts |
-| Тип события, категория и приоритет; ≥90% | Метки источника + правила + обучаемая текстовая модель | 48 отдельных учебных событий: 100% всей тройки; `classification-report.json` |
-| Загрузка «Если X → Y» | Форма, редактирование, JSON/MD/TXT/PDF/DOCX | API-тесты, браузерное создание инструкции, тест разбора If/Then |
-| Подбор релевантной инструкции | Многоязычные ONNX-эмбеддинги и PostgreSQL cosine search | Тест на настоящем pgvector, браузерный поиск и HTTP smoke |
-| Дашборд с рекомендациями | События, фильтры, карточка, источники и шаги регламентов | Chromium: реальное событие → инструкция |
-| Только ручное подтверждение | Статус принятия/выполнения + идемпотентный аудит; нет исполнительного слоя | API, бизнес-тесты, сквозной и браузерный сценарии |
-| docker-compose up --build | Стандартный Compose, миграции, начальные данные и healthchecks | Проверяется стандартный запуск и отдельный чистый стенд |
-| React/Vue/Next, SPA, адаптивность | React + TypeScript, responsive CSS, русский интерфейс | TypeScript/build и браузерный экран 375 px без горизонтальной прокрутки |
-| REST backend | FastAPI и OpenAPI на /api/docs | API-тесты и примеры README |
-| Очереди тяжёлых задач | Celery + Redis; обработка файлов и индексация в worker | Реальный фоновый импорт через HTTP 202 и очередь |
-| PostgreSQL: профили, логи, метаданные | Таблицы профиля/сессий, аудита, событий, регламентов и заданий | Миграция, API и PostgreSQL интеграционные тесты |
-| pgvector/Qdrant/Pinecone и эмбеддинги | pgvector 384 + FastEmbed multilingual MiniLM | Проверяется расширение vector и результат реального поиска |
-| Документ >50 страниц без 504 | Фоновый импорт; соединение не ждёт извлечения и индексации | 60-страничный PDF: 202 за 0,094 сек; полный результат около 8,1 сек в первом smoke-прогоне |
-| README с инструкцией и API | Русский README, .env.example, примеры curl и файлов | Запуск по команде и сквозная проверка |
-| Готовое решение в репозитории | Исходники, Compose, тесты, документация | Roman4588/B2B_8case |
-| Видео до 5 минут с командой и приложением | Ролик «Дейкстра», пять участников, реальное приложение | Продолжительность проверяется ffprobe после сборки видео |
+Все команды выполняются из корня **текущего комплекта**. Полный backend: `docker compose -p signalis-final-20261112 --profile test run --rm tests`. Браузер: из `frontend`, `BASE_URL=http://localhost:18095`, реквизиты тестового администратора, `npm run test:e2e`. Итоги публикации — в `github-amvera-sync-2026-11-12.md`; `final-readiness.md` сохраняет историческую локальную приёмку.
 
-Дополнительно проверяются: повторное поступление alert, восстановление после успешного
-пустого снимка, сохранение active при ошибке источника, конфликт ручных переходов,
-восстановление прерванного импорта, пересчёт рекомендаций после новой инструкции
-и одновременное редактирование во время индексирования.
+| Требование | Место реализации | Воспроизводимая проверка | Фактический результат |
+|---|---|---|---|
+| A: инженер меняет тип, категорию, приоритет; комментарий необязателен | `EngineerFeedback.tsx`, `main.CorrectionInput`, `feedback.save_correction` | `test_correction_auth_validation_idempotence_and_effective_queries`, `feedback-live.spec.ts` | Пройдено в итоговых проверках |
+| A: автор, время, атомарный аудит; повтор обновляет одну запись | `feedback.py`, `models.ClassificationCorrection`, миграция 0004 | `test_correction_audit_failure_rolls_back`, `test_concurrent_corrections_and_feedback_are_unique` | Пройдено в итоговых проверках |
+| A: отметка «Исправлено инженером» | `main.incident_public`, `Incidents.tsx` | `feedback-live.spec.ts`, перезагрузка | Пройдено в итоговых проверках |
+| A: ручные значения в карточке, списке, фильтрах, сортировке и сводке | `main.incidents`, `main.summary`, `feedback.effective` | `test_correction_auth_validation_idempotence_and_effective_queries`, `test_effective_priority_controls_sorting` | Пройдено в итоговых проверках |
+| A: опрос не стирает правку; новый эпизод не наследует | `monitoring.ingest_alerts`, отдельная связь по `incidents.id` | `test_ingest_preserves_correction_but_new_episode_does_not_inherit` | Пройдено в итоговых проверках |
+| A: экспорт одной командой и пересчёт исходного классификатора | `scripts/export_corrections.py`, `scripts/evaluate.py` | CLI из README; `test_export_uses_saved_inputs_and_evaluates_automatic_classifier` | Пройдено в итоговых проверках; низкие метрики исправленного примера допустимы |
+| A: понятный пустой корпус | `evaluate.evaluate` | `test_lexical_explanation_and_empty_evaluation`, CLI с `[]` | Пройдено в итоговых проверках |
+| A: обучение и проверка разделены | `classifier.text_models` читает только `app/seed/training.json`; evaluate читает переданный dataset | Просмотр путей чтения, `test_classifier.py`, экспорт вне training/evaluation | Автодообучения нет; экспорт не изменяет обучающий набор |
+| B: реальные совпадения слов, честное отсутствие и семантическое сходство | `explanations.py`, `knowledge.search_runbooks`, `Incidents.tsx` | `test_lexical_explanation_and_empty_evaluation`, `test_existing_recommendation_gets_factual_explanation`, live UI | Пройдено в итоговых проверках; лексика и векторы обозначены отдельными сигналами |
+| B: сходство не называется вероятностью | `explanations.explain`, UI | `feedback-live.spec.ts` | Пройдено в итоговых проверках |
+| B: обе оценки с автором, временем и аудитом | `feedback.save_feedback`, миграция 0004, `RecommendationRating` | `test_feedback_unique_revision_generation_aggregates_and_audit`, `test_feedback_audit_failure_rolls_back`, live UI | Пройдено в итоговых проверках |
+| B: повтор идемпотентен, смена оценки обновляет запись | Уникальность author/episode/book/revision, блокировка эпизода | `test_concurrent_corrections_and_feedback_are_unique`, `feedback-live.spec.ts` | Пройдено в итоговых проверках |
+| B: сводка соответствует БД по всем редакциям | `feedback.usefulness_counts`, `main.runbooks`, `Knowledge.tsx` | `test_feedback_is_per_author_and_revision_but_summary_combines_revisions`, live UI | Пройдено в итоговых проверках |
+| B: редактирование/удаление не портит историю | `recommendation_snapshot`, исторический ID без FK на живую инструкцию | `test_deleting_instruction_preserves_feedback_snapshot`, `test_deleted_runbook_does_not_delete_or_block_historical_feedback` | Пройдено в итоговых проверках |
+| B: запоздавший ответ/polling не возвращает старые данные | `api.useResource` version, `Incidents` generation, backend блокировки | `feedback.spec.ts`, `test_feedback_waiting_for_invalidation_rejects_stale_generation` | Пройдено в итоговых проверках |
+| Настоящий Prometheus → классификация → рекомендация pgvector | `monitoring`, `classifier`, `knowledge`, Celery | `scripts/smoke.py`, `operator.spec.ts`, `test_knowledge_integration.py` | Пройдено в итоговых проверках |
+| Ручные решения и история | `operations.py`, `/actions`, `/history` | `test_workflows.py`, `operator.spec.ts`, smoke | Пройдено в итоговых проверках |
+| Создание, правка, импорт, ошибка/retry и удаление | `main`, `documents.py`, `tasks.py` | `test_api.py`, `test_recovery_integration.py`, live UI; PDF60 через smoke | Пройдено в итоговых проверках |
+| Вход/выход, инженер/админ в общем рабочем пространстве | `auth.py`, `accounts.py`, `require_admin` для удаления/учётных записей | `test_accounts.py`, `test_api.py`, smoke, браузерные role checks | Пройдено в итоговых проверках; новые ограничения доступа не вводились |
+| Чистый старт, миграции и повторный запуск | Compose init, bootstrap, тома models/uploads/postgres | Новый проект/тома, подготовка модели без копирования, restart | Пройдено в итоговых проверках |
+| Совместимость изменений безопасности импорта/экспорта | лимиты PDF/DOCX, скрытие путей/ошибок, повторное чтение job под блокировкой | `test_security_review.py`, `test_security_postgres.py`, сборки и общая регрессия | Пройдено в итоговых проверках; пентест не выполнялся |
+| Адаптивность и доступность существующих экранов | Текущие CSS и компоненты | `design-live.spec.ts`, `design-states.spec.ts`, остальные UI-тесты | Пройдено в итоговых проверках; Chromium/Edge, не сертификация WCAG |
+| Комплектность, актуальность README и видео | README, final-readiness, demo-script, submission-files | Манифест SHA256, ffprobe и просмотр кадров видео | Пройдено в итоговых проверках; старый ролик не демонстрирует A/B |
 
-Полные фактические результаты финального прогона: `verification.md`.
-Оценка 100% относится к опубликованному авторскому набору из 48 событий.
-Независимый набор организаторов не предоставлен и не проверялся; гарантия результата
-на нём не заявляется.
+Итоги версии к публикации: 108 backend-тестов и полный браузерный прогон 35/35. Standalone при 950 MiB / 0,5 CPU прошёл реальные рекомендации и PDF60. Подробности и незасчитанные попытки — в `github-amvera-sync-2026-11-12.md`; предыдущие результаты сохранены в `final-readiness.md`.

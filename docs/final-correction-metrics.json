@@ -1,0 +1,41 @@
+{
+  "samples": 2,
+  "metrics": {
+    "severity": 0.0,
+    "category": 1.0,
+    "priority": 0.0,
+    "triple_accuracy": 0.0
+  },
+  "confusion_matrices": {
+    "severity": {
+      "critical": {
+        "critical": 0,
+        "warning": 0
+      },
+      "warning": {
+        "critical": 2,
+        "warning": 0
+      }
+    },
+    "category": {
+      "database": {
+        "database": 2
+      }
+    },
+    "priority": {
+      "P1": {
+        "P1": 0,
+        "P2": 0
+      },
+      "P2": {
+        "P1": 2,
+        "P2": 0
+      }
+    }
+  },
+  "dataset_sha256": "cd418dfe6590fcaf0ba6785992d0a64ada07e6e7ec31a9347671626e44fa7d22",
+  "evaluated_at": "2026-11-12T09:03:44.522634+00:00",
+  "provenance": "Engineer corrections (sanitized input snapshots).",
+  "limitation": "Correction examples are selected errors, not an unbiased benchmark. Sanitization may change classifier input; accuracy on unknown events is unmeasured.",
+  "passed": false
+}
