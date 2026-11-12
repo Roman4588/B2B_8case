@@ -51,10 +51,18 @@ def _process_import(db, job_id: str):
         return
     job.status, job.updated_at, job.error = "running", utcnow(), ""
     db.commit()
+    public_error = None
     try:
         path = Path(job.path)
-        content = extract(path.read_bytes(), path.suffix.lower())
-        records = parse_runbooks(content, path.suffix.lower(), job.filename)
+        raw = path.read_bytes()
+        try:
+            content = extract(raw, path.suffix.lower())
+            records = parse_runbooks(content, path.suffix.lower(), job.filename)
+        except ValueError as exc:
+            # These are document-validation messages. Infrastructure/indexing
+            # exceptions below belong in operator logs, not shared job responses.
+            public_error = str(exc)[:2000]
+            raise
         job.total = len(records)
         db.commit()
         for index, record in enumerate(records):
@@ -71,10 +79,14 @@ def _process_import(db, job_id: str):
         job.status = "succeeded"
         invalidate_recommendations(db)
         db.commit()
-    except Exception as exc:
+    except Exception:
         db.rollback()
         job = db.get(ImportJob, job_id)
-        job.status, job.error, job.updated_at = "failed", str(exc)[:2000], utcnow()
+        job.status, job.error, job.updated_at = (
+            "failed",
+            public_error or "Не удалось обработать документ. Подробности доступны администратору в журнале.",
+            utcnow(),
+        )
         db.commit()
         log.exception("Import failed: %s", job_id)
 

@@ -9,3 +9,14 @@ frontend/dist
 test-results
 tools
 docs
+
+# Local acceptance artifacts and uploads are never build inputs.
+outputs
+.hallmark
+test-documents
+.ruff_cache
+.ci-venv
+**/test-results
+**/playwright-report
+*.log
+*.cookies

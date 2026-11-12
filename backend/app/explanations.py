@@ -2,10 +2,14 @@
 
 import re
 import unicodedata
+from pathlib import Path
 
-from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
-
-STOP_WORDS = set(ENGLISH_STOP_WORDS) | set(
+# Keep this vocabulary as data: importing sklearn here loads SciPy in the API
+# and duplicates the ML runtime inside the 1 GB standalone deployment.
+# Source and redistribution notice: seed/english_stop_words.LICENSE.
+STOP_WORDS = set(
+    (Path(__file__).parent / "seed" / "english_stop_words.txt").read_text(encoding="utf-8").split()
+) | set(
     "и в во не что он на я с со как а то все она так его но да ты к у же вы за бы по только ее мне было вот от меня еще нет о из ему теперь когда даже ну вдруг ли если уже или ни быть был него до вас нибудь опять уж вам ведь там потом себя ничего ей может они тут где есть надо ней для мы тебя их чем была сам чтоб без будто чего раз тоже себе под будет ж тогда кто этот того потому этого какой совсем ним здесь этом один почти мой тем чтобы нее сейчас были куда зачем всех никогда можно при наконец два об другой хоть после над больше тот через эти нас про всего них какая много разве три эту моя впрочем хорошо свою этой перед иногда лучше чуть том нельзя такой им более всегда конечно всю между это также into using should when then если при после перед нужно необходимо требуется проверить проверка событие регламент инструкция the is are was were have has be been do does did no not".split()
 )
 

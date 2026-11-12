@@ -5,6 +5,41 @@ from zipfile import BadZipFile, ZipFile
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
+MAX_TEXT_CHARACTERS = 3_000_000
+MAX_PDF_PAGE_BYTES = 4 * 1024 * 1024
+MAX_PDF_CONTENT_BYTES = 16 * 1024 * 1024
+
+
+def collect_text(parts, separator="\n"):
+    """Enforce the output budget while consuming parts, before joining them."""
+    collected, size = [], 0
+    for part in parts:
+        size += len(part) + (len(separator) if collected else 0)
+        if size > MAX_TEXT_CHARACTERS:
+            raise ValueError("Документ содержит слишком много текста")
+        collected.append(part)
+    return separator.join(collected)
+
+
+def pdf_text(pages):
+    decoded_size = 0
+    for page in pages:
+        stream = page.get_contents()
+        size = len(stream.get_data()) if stream is not None else 0
+        decoded_size += size
+        if size > MAX_PDF_PAGE_BYTES or decoded_size > MAX_PDF_CONTENT_BYTES:
+            raise ValueError("Превышен лимит содержимого PDF")
+        yield page.extract_text() or ""
+
+
+def docx_text(document):
+    for paragraph in document.paragraphs:
+        yield paragraph.text
+    for table in document.tables:
+        for row in table.rows:
+            # Bound cells as well as the document: a table row can be very large.
+            yield collect_text((cell.text for cell in row.cells), " | ")
+
 
 class RunbookInput(BaseModel):
     title: str = Field(min_length=1, max_length=200)
@@ -47,7 +82,7 @@ def extract(content: bytes, extension: str) -> str:
             reader = PdfReader(BytesIO(content))
             if len(reader.pages) > 2000:
                 raise ValueError("Лимит — 2000 страниц")
-            text = "\n".join(page.extract_text() or "" for page in reader.pages)
+            text = collect_text(pdf_text(reader.pages))
         elif extension == ".docx":
             from docx import Document
 
@@ -57,15 +92,12 @@ def extract(content: bytes, extension: str) -> str:
                 if "word/document.xml" not in archive.namelist():
                     raise ValueError("Файл не является DOCX")
             doc = Document(BytesIO(content))
-            text = "\n".join(
-                [p.text for p in doc.paragraphs]
-                + [" | ".join(c.text for c in row.cells) for t in doc.tables for row in t.rows]
-            )
+            text = collect_text(docx_text(doc))
         else:
             raise ValueError("Поддерживаются JSON, MD, TXT, PDF и DOCX")
         if not text.strip():
             raise ValueError("Нет текстового слоя. Для скана сначала выполните OCR")
-        if len(text) > 3_000_000:
+        if len(text) > MAX_TEXT_CHARACTERS:
             raise ValueError("Документ содержит слишком много текста")
         return text
     except (ValueError, UnicodeDecodeError, BadZipFile) as exc:
@@ -82,23 +114,24 @@ def parse_runbooks(text: str, extension: str, filename: str = "Документ"
         else:
             explicit_rules = re.search(
                 r"\b(?:Если|If)\s+.+?\s*(?:→|->|⇒|\bthen\b)\s*.+",
-                text, flags=re.IGNORECASE | re.DOTALL,
+                text,
+                flags=re.IGNORECASE | re.DOTALL,
             )
             if extension == ".md" and not explicit_rules:
                 # Headings describe sections of the same procedure, not independent advice.
                 # Chunking for vector search is handled later, without losing cautions.
                 title = re.search(r"(?m)^#\s+(.+)$", text)
-                return [RunbookInput(
-                    title=(title.group(1).strip() if title else filename)[:200],
-                    condition=text[:30000],
-                    steps=[text[start:start + 10000] for start in range(0, len(text), 10000)],
-                ).model_dump()]
+                return [
+                    RunbookInput(
+                        title=(title.group(1).strip() if title else filename)[:200],
+                        condition=text[:30000],
+                        steps=[text[start : start + 10000] for start in range(0, len(text), 10000)],
+                    ).model_dump()
+                ]
             records = []
             # Each line-start If/Если begins a separate rule, including plain TXT
             # and text extracted from PDF/DOCX without Markdown headings.
-            blocks = re.split(
-                r"(?im)^#{1,3}\s+|(?=^[ \t]*(?:[-*]|\d+[.)])?[ \t]*(?:Если|If)\s+)", text
-            )
+            blocks = re.split(r"(?im)^#{1,3}\s+|(?=^[ \t]*(?:[-*]|\d+[.)])?[ \t]*(?:Если|If)\s+)", text)
             for index, block in enumerate(blocks):
                 block = block.strip()
                 if not block:
