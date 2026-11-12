@@ -1,7 +1,7 @@
 .events-screen ::selection,
 .signalis-auth ::selection {
-  background: #005fcc;
-  color: #fff;
+  background: var(--color-text-selection);
+  color: var(--color-accent-ink);
 }
 
 /* The search wrapper owns keyboard focus; never draw a second frame inside it. */
@@ -11,14 +11,18 @@
   box-shadow: none;
 }
 
-html[data-input-method="pointer"] :is(.events-screen, .signalis-auth) :is(button, a, input, select, textarea):focus,
-html[data-input-method="pointer"] .events-screen :is(.search, .upload-button):focus-within {
+html[data-input-method="pointer"]
+  :is(.events-screen, .signalis-auth)
+  :is(button, a, input, select, textarea):focus,
+html[data-input-method="pointer"]
+  .events-screen
+  :is(.search, .upload-button):focus-within {
   outline: none;
   box-shadow: none;
 }
 
 .events-screen .knowledge-intro.drag-over {
-  border-color: #005fcc;
-  background: #edf5ff;
-  box-shadow: inset 0 0 0 1px #005fcc;
+  border-color: var(--color-focus);
+  background: var(--color-selection);
+  box-shadow: inset 0 0 0 1px var(--color-focus);
 }

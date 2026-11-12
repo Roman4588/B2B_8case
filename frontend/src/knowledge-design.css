@@ -4,11 +4,11 @@
 /* Hallmark · answered F3 · heading balance inherits from the common events.css stylesheet. */
 .events-screen .knowledge-screen .section-heading {
   align-items: center;
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-md);
   gap: var(--space-md);
 }
 .events-screen .knowledge-screen .section-heading h2 {
-  font-size: 22px;
+  font-size: 18px;
   color: var(--color-ink);
 }
 .events-screen .knowledge-screen .section-heading p {
@@ -204,7 +204,7 @@
 }
 .events-screen .book footer {
   grid-column: 2;
-  grid-row: 1 / span 4;
+  grid-row: 1 / span 6;
   flex-direction: column;
   align-items: flex-end;
   justify-content: space-between;
@@ -358,4 +358,13 @@
   .events-screen .knowledge-editor footer button {
     flex: 1 1 auto;
   }
+}
+
+.events-screen .jobs progress {
+  width: 96px;
+  height: 8px;
+  accent-color: var(--color-accent);
+}
+.events-screen .book > .usefulness-summary {
+  grid-column: 1;
 }

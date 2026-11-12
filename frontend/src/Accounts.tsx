@@ -103,7 +103,7 @@ export function Login({ onLogin }: { onLogin: (operator: Operator) => void }) {
         <span className="login-signature">Рабочее пространство команды</span>
       </section>
       <section className="login-form">
-        <h2>Добро пожаловать</h2>
+        <h2>Вход в Сигналис</h2>
         <p>Войдите с учётной записью сотрудника</p>
         <form onSubmit={submit}>
           <label>
@@ -288,7 +288,9 @@ export function Employees({ operator }: { operator: Operator }) {
         </div>
       )}
       {!resource.data && !resource.error && (
-        <p className="loading">Загружаем сотрудников…</p>
+        <p className="loading" role="status">
+          Загружаем сотрудников…
+        </p>
       )}
       <div className="employee-list">
         {resource.data?.map((user) => (

@@ -108,6 +108,9 @@ function Workspace({
   const online = !source.error && source.data?.status === "online";
   return (
     <div className="app-shell events-screen" data-page={page}>
+      <a className="skip-link" href="#workspace-main">
+        К содержимому
+      </a>
       <aside className="sidebar">
         <a
           className="brand"
@@ -120,7 +123,7 @@ function Workspace({
           <Brand />
         </a>
         <div className="workspace-label">Мониторинг инфраструктуры</div>
-        <nav>
+        <nav aria-label="Разделы приложения">
           {pages
             .filter((item) => item.id !== "users" || operator.role === "admin")
             .map((item) => (
@@ -192,7 +195,7 @@ function Workspace({
             </button>
           </div>
         </header>
-        <main className="main-content">
+        <main className="main-content" id="workspace-main" tabIndex={-1}>
           <div className="page-intro">
             <div>
               <h1>
@@ -279,7 +282,11 @@ function Stat({
   description: string;
 }) {
   return (
-    <article className={"stat " + tone}>
+    <article
+      className={"stat " + tone}
+      title={description}
+      aria-label={`${title}: ${value ?? "загрузка"}. ${description}`}
+    >
       <div>
         <span>{title}</span>
       </div>

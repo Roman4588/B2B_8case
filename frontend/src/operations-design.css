@@ -169,7 +169,7 @@
   font-variant-numeric: tabular-nums;
 }
 .events-screen .audit-list blockquote {
-  grid-column: 1;
+  grid-column: 1 / -1;
   margin: 0;
   padding: 0;
   border: 0;
@@ -223,4 +223,35 @@
     align-items: flex-start;
     gap: var(--space-2xs);
   }
+}
+
+.events-screen .audit-record > details {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.events-screen .audit-record summary {
+  cursor: pointer;
+  color: var(--color-ink-2);
+  padding-block: var(--space-xs);
+  min-height: 40px;
+}
+.events-screen .audit-record summary:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.events-screen .audit-change {
+  margin-block: var(--space-xs);
+}
+.events-screen .audit-change strong {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.events-screen .audit-change pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: var(--space-2xs) 0;
+  padding: var(--space-sm);
+  background: var(--color-paper-2);
+  color: var(--color-ink-2);
+  font: 13px/1.6 var(--font-body);
 }

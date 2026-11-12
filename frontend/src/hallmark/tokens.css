@@ -43,7 +43,7 @@
   --z-modal: 400;
   --z-toast: 500;
   --z-tooltip: 600;
-  --color-paper: #ffffff;
+  --color-paper: oklch(99.6% 0.002 260);
   --color-paper-2: #f4f4f6;
   --color-paper-3: #ebedf0;
   --color-ink: #25282d;
@@ -51,8 +51,9 @@
   --color-muted: #626773;
   --color-rule: #dfe1e5;
   --color-accent: #c83232;
-  --color-accent-ink: #ffffff;
+  --color-accent-ink: oklch(99.6% 0.002 260);
   --color-focus: #a92323;
+  --color-text-selection: #005fcc;
   --font-body:
     "Golos Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-body);
@@ -75,6 +76,8 @@
   --sidebar-width: 212px;
   --control-height: 36px;
   --radius-card: 4px;
+  --radius-button: 10px;
+  --shadow-popover: 0 8px 28px oklch(25% 0.01 260 / 0.12);
   --radius-pill: 999px;
   --rule-hair: 1px;
   --shadow-card: none;

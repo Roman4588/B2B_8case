@@ -248,7 +248,7 @@
   margin-bottom: var(--space-lg);
 }
 .events-screen .employee-toolbar h2 {
-  font-size: 22px;
+  font-size: 18px;
   margin-bottom: var(--space-2xs);
 }
 .events-screen .employee-toolbar p {
@@ -260,7 +260,7 @@
   background: var(--color-paper);
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
-  overflow: hidden;
+  overflow: clip;
 }
 .events-screen .employee-card {
   padding: var(--space-md) var(--space-lg);

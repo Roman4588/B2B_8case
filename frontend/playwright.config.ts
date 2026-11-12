@@ -1,6 +1,8 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
+  // Live scenarios share monitoring episodes and the knowledge corpus.
+  workers: 1,
   timeout: 60000,
   use: {
     baseURL: process.env.BASE_URL || "http://localhost:8080",

@@ -2,7 +2,7 @@
  * paper: #f4f4f6 · accent: #c83232 · display: Golos Text · body: Golos Text
  * nav: kept sidebar · signature: incident queue and engineer decision · states: loading, empty, error, full
  * axes: light/grotesk-sans/warm · posture: operational workbench · contrast: pass · v2.0.0 */
-/* Hallmark · finish-review: subagent · ship · 2 code findings resolved · gap: none */
+/* Hallmark · finish-review: subagent · ship after recapture · 3 findings resolved (focus containment, return focus, short-screen scrolling) · gap: none */
 /* Hallmark · pre-emit critique: dense queue, readable detail; weakest: competing containers, flattened to two working regions. */
 /* Hallmark · reworded "Держите ситуацию под контролем." to "События" · 19, task brief removes marketing copy. */
 /* Hallmark · dropped "Ассистент рядом" · user's brief removes distracting promotional blocks; help and safety notes stay. */
@@ -10,6 +10,8 @@
 /* Hallmark · waive 39b · event-row records contain severity, title, host and handling · the entire multi-line record is selectable for accessibility. */
 /* Hallmark · dismiss 3 · mobile navigation has no icon tiles · the existing six destinations use a compact text grid. */
 /* Hallmark · answered F25: Mobile omits redundant stat explanations, breadcrumb, date and shift label; data, source state and every action stay. */
+/* Hallmark · dropped onClick={() => setEditing(false)} · Replaced with closeEditor: cancellation remains and keyboard focus returns to its trigger. */
+/* Hallmark · reworded "Добро пожаловать" to "Вход в Сигналис" · Gate 19: name the actual account access task. */
 @import url("./hallmark/tokens.css");
 
 html,
@@ -185,10 +187,12 @@ body {
 }
 .events-screen .main-content {
   max-width: var(--container);
-  padding: var(--space-lg) var(--space-xl);
+  width: 100%;
+  padding: var(--space-lg);
+  margin-inline: auto;
 }
 .events-screen .page-intro {
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-md);
   align-items: center;
 }
 .events-screen .page-intro h1 {
@@ -214,7 +218,7 @@ body {
   background: none;
   border-block: 1px solid var(--color-rule);
   margin-bottom: var(--space-lg);
-  padding: var(--space-md) 0;
+  padding: var(--space-sm) 0;
 }
 .events-screen .stat {
   display: flex;
@@ -253,6 +257,7 @@ body {
   color: var(--color-warning);
 }
 .events-screen .stat p {
+  display: none;
   font-size: 12px;
   color: var(--color-muted);
   line-height: 1.4;
@@ -279,9 +284,9 @@ body {
   gap: var(--space-xs);
 }
 .events-screen .workspace {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-lg);
-  align-items: stretch;
+  grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr);
+  gap: var(--space-md);
+  align-items: start;
 }
 .events-screen .event-panel,
 .events-screen .detail-panel {
@@ -311,7 +316,7 @@ body {
 .events-screen .search input {
   min-height: 38px;
   padding: var(--space-xs) 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-ink);
 }
 .events-screen .search:focus-within {
@@ -824,7 +829,7 @@ body {
     padding: var(--space-xl) var(--space-2xl);
   }
   .events-screen .workspace {
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr);
   }
 }
 @media (max-width: 1100px) and (min-width: 701px) {
@@ -850,6 +855,9 @@ body {
   }
   .events-screen .stat {
     padding: 0 var(--space-sm);
+  }
+  .events-screen .stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .events-screen .stat p {
     display: none;
@@ -981,25 +989,33 @@ body {
   }
   .events-screen .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: var(--space-md);
-    padding: var(--space-md) 0;
+    row-gap: var(--space-sm);
+    padding: var(--space-sm) 0;
     margin-bottom: var(--space-lg);
   }
   .events-screen .stat {
-    padding: 0 var(--space-md);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 0 var(--space-sm);
     text-align: left;
   }
   .events-screen .stat > div {
-    justify-content: flex-start;
+    display: block;
+    text-align: left;
   }
   .events-screen .stat:nth-child(odd) {
     padding-left: 0;
   }
   .events-screen .stat:nth-child(even) {
     border-right: 0;
+    padding-right: 0;
   }
   .events-screen .stat > strong {
     font-size: 22px;
+    margin: 0;
+    text-align: right;
   }
   .events-screen .stat p {
     display: none;
