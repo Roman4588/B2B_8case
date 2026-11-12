@@ -33,7 +33,37 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
   const uploadBusy = useRef(false);
   const books = useResource<{ items: Runbook[]; semantic: boolean }>(
     "/runbooks?q=" + encodeURIComponent(query),
+    query.trim() ? 0 : 5000,
   );
+  const usefulness = useResource<
+    Record<
+      string,
+      {
+        revision: number;
+        status: string;
+        helpful_count: number;
+        not_helpful_count: number;
+      }
+    >
+  >("/runbooks/usefulness", query.trim() ? 5000 : 0);
+  const displayedBooks = books.data?.items.flatMap((book) => {
+    if (!query.trim() || !usefulness.data) return [book];
+    const live = usefulness.data[book.id];
+    // Never offer edits against a deleted or superseded search snapshot.
+    if (!live || live.revision !== book.revision || live.status !== "ready")
+      return [];
+    return [
+      {
+        ...book,
+        helpful_count: live.helpful_count,
+        not_helpful_count: live.not_helpful_count,
+      },
+    ];
+  });
+  const staleResults =
+    displayedBooks &&
+    books.data &&
+    displayedBooks.length !== books.data.items.length;
   const jobs = useResource<Job[]>("/jobs");
   function askDelete(kind: "book" | "job", id: string, name: string) {
     setDeleteError("");
@@ -247,7 +277,9 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
         onSubmit={(e) => {
           e.preventDefault();
           setVisibleBooks(10);
-          setQuery(q);
+          if (query === q.trim()) books.refresh();
+          else setQuery(q.trim());
+          usefulness.refresh();
         }}
       >
         <label className="search">
@@ -287,14 +319,26 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
             : "Загружаем базу знаний…"}
         </div>
       )}
-      {books.data?.items.length === 0 && (
+      {staleResults && (
+        <div className="hint">
+          Результаты изменились: инструкции обновлены или удалены. Нажмите
+          «Найти», чтобы повторить поиск.
+        </div>
+      )}
+      {query && usefulness.error && (
+        <div className="hint">
+          Не удалось обновить оценки регламентов. Показаны последние полученные
+          значения.
+        </div>
+      )}
+      {displayedBooks?.length === 0 && !staleResults && (
         <Empty
           title="Инструкции не найдены"
           description="Добавьте новый регламент или попробуйте другое описание проблемы."
         />
       )}
       <div className="book-grid" id="knowledge-book-list">
-        {books.data?.items.slice(0, visibleBooks).map((book) => (
+        {displayedBooks?.slice(0, visibleBooks).map((book) => (
           <article className="book" key={book.id}>
             <h3>{book.title}</h3>
             <header>
@@ -353,7 +397,7 @@ export function Knowledge({ canDelete = false }: { canDelete?: boolean }) {
       </div>
       <ShowMore
         shown={visibleBooks}
-        total={books.data?.items.length ?? 0}
+        total={displayedBooks?.length ?? 0}
         onMore={() => setVisibleBooks((n) => n + 10)}
         label="Показать ещё инструкции"
         controls="knowledge-book-list"

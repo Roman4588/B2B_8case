@@ -502,43 +502,60 @@ function Detail({
               : "—"}
           </span>
         </div>
-        {item.recommendation_status === "pending" && (
+        {item.lifecycle === "resolved" && (
           <div className="hint">
-            Ищем подходящие регламенты. При первом запуске загружается локальная
-            модель.
+            Событие снято.{" "}
+            {item.recommendations.length
+              ? "Сохранённые рекомендации показаны как история."
+              : "Сохранённых рекомендаций нет."}
           </div>
         )}
-        {item.recommendation_status === "ready" &&
+        {item.lifecycle === "firing" &&
+          item.recommendation_status === "not_required" && (
+            <div className="hint">
+              Вмешательство не требуется: проверка завершена успешно.
+            </div>
+          )}
+        {item.lifecycle === "firing" &&
+          item.recommendation_status === "pending" && (
+            <div className="hint">
+              Ищем подходящие регламенты. При первом запуске загружается
+              локальная модель.
+            </div>
+          )}
+        {item.lifecycle === "firing" &&
+          item.recommendation_status === "ready" &&
           !item.recommendations.length && (
             <div className="hint">
-              Близких инструкций нет. Проверьте событие вручную или добавьте
+              Регламент не найден. Проверьте событие вручную или добавьте
               регламент в базу знаний.
             </div>
           )}
-        {item.recommendation_status === "failed" && (
-          <div className="error" role="alert">
-            Не удалось подобрать инструкции. Проверьте событие вручную или
-            повторите поиск.
-            <button
-              disabled={busy || item.lifecycle !== "firing"}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await api("/incidents/" + id + "/recommendations/retry", {
-                    method: "POST",
-                  });
-                  refresh();
-                } catch (err) {
-                  setMessage((err as Error).message);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Повторить поиск
-            </button>
-          </div>
-        )}
+        {item.lifecycle === "firing" &&
+          item.recommendation_status === "failed" && (
+            <div className="error" role="alert">
+              Не удалось подобрать инструкции. Проверьте событие вручную или
+              повторите поиск.
+              <button
+                disabled={busy || item.lifecycle !== "firing"}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await api("/incidents/" + id + "/recommendations/retry", {
+                      method: "POST",
+                    });
+                    refresh();
+                  } catch (err) {
+                    setMessage((err as Error).message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Повторить поиск
+              </button>
+            </div>
+          )}
         {(item.recommendation_status === "ready"
           ? item.recommendations
           : []

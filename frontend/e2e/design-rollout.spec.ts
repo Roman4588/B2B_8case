@@ -42,6 +42,15 @@ async function mount(page: Page, role = "admin") {
       json = { status: "ready", indexed_runbooks: 1 };
     else if (path === "/api/runbooks")
       json = { items: [book], semantic: false };
+    else if (path === "/api/runbooks/usefulness")
+      json = {
+        [book.id]: {
+          revision: book.revision,
+          status: book.status,
+          helpful_count: 0,
+          not_helpful_count: 0,
+        },
+      };
     else if (path === "/api/jobs") json = [];
     else if (path === "/api/audit")
       json = [
@@ -77,6 +86,119 @@ async function navigate(page: Page, name: string) {
     .getByRole("button", { name, exact: true })
     .click();
 }
+
+for (const scenario of [
+  {
+    status: "not_required",
+    lifecycle: "firing",
+    message: "Вмешательство не требуется",
+  },
+  { status: "ready", lifecycle: "firing", message: "Регламент не найден" },
+  { status: "ready", lifecycle: "resolved", message: "Событие снято" },
+  {
+    status: "pending",
+    lifecycle: "resolved",
+    message: "Сохранённых рекомендаций нет",
+    empty: true,
+  },
+]) {
+  test(`advice distinguishes ${scenario.status}/${scenario.lifecycle}`, async ({
+    page,
+  }) => {
+    await mount(page);
+    const incident = {
+      id: "advice-event",
+      title: "Контрольное событие",
+      description: "Синтетический пример",
+      host: "qa",
+      severity: "info",
+      category: "application",
+      priority: "P4",
+      confidence: 1,
+      needs_review: false,
+      rationale: "Тест",
+      lifecycle: scenario.lifecycle,
+      handling: "new",
+      first_seen: new Date().toISOString(),
+      last_seen: new Date().toISOString(),
+      labels: {},
+      recommendation_status: scenario.status,
+      recommendation_generation: 0,
+      recommendations:
+        scenario.lifecycle === "resolved" && !scenario.empty
+          ? [{ ...book, similarity: 0.8 }]
+          : [],
+    };
+    await page.route("**/api/incidents**", (route) => {
+      const path = new URL(route.request().url()).pathname;
+      return route.fulfill({
+        json: path.endsWith("/history")
+          ? []
+          : path === "/api/incidents"
+            ? { items: [incident], total: 1 }
+            : incident,
+      });
+    });
+    await page.reload();
+    await page.locator(".event-row").click();
+    await expect(
+      page.getByText(scenario.message, { exact: false }),
+    ).toBeVisible();
+    if (scenario.lifecycle === "resolved" && !scenario.empty)
+      await expect(page.locator(".recommendation")).toHaveCount(1);
+    else await expect(page.locator(".recommendation")).toHaveCount(0);
+    if (scenario.lifecycle === "resolved")
+      await expect(
+        page.getByText("Ищем подходящие регламенты", { exact: false }),
+      ).toHaveCount(0);
+  });
+}
+
+test("semantic search runs on submit while feedback refreshes without embeddings", async ({
+  page,
+}) => {
+  await mount(page);
+  let searches = 0;
+  let helpful = 0;
+  let revision = 1;
+  await page.route("**/api/runbooks?*", async (route) => {
+    const semantic = !!new URL(route.request().url()).searchParams.get("q");
+    if (semantic) searches++;
+    await route.fulfill({ json: { items: [book], semantic } });
+  });
+  await page.route("**/api/runbooks/usefulness", (route) =>
+    route.fulfill({
+      json: {
+        [book.id]: {
+          revision,
+          status: "ready",
+          helpful_count: helpful,
+          not_helpful_count: 0,
+        },
+      },
+    }),
+  );
+  await navigate(page, "База знаний");
+  await page.getByLabel("Поиск регламентов").fill("PostgreSQL недоступен");
+  await page.getByRole("button", { name: "Найти", exact: true }).click();
+  await expect(page.locator(".book")).toHaveCount(1);
+  await expect.poll(() => searches).toBe(1);
+  helpful = 2;
+  // Two real polling intervals: counters must change without another model request.
+  await expect(page.locator(".usefulness-summary")).toContainText(
+    "Помогла: 2",
+    { timeout: 12000 },
+  );
+  await page.waitForTimeout(5500);
+  expect(searches).toBe(1);
+  await page.getByRole("button", { name: "Найти", exact: true }).click();
+  await expect.poll(() => searches).toBe(2);
+  revision = 2;
+  await expect(page.locator(".book")).toHaveCount(0, { timeout: 12000 });
+  await expect(
+    page.getByText("Результаты изменились", { exact: false }),
+  ).toBeVisible();
+});
 
 test("login and mandatory password change keep their request contracts and validation", async ({
   page,
@@ -232,13 +354,11 @@ test("knowledge search, edit and import preserve request contracts", async ({
   });
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const upload = page.waitForRequest("**/api/runbooks/import");
-  await page
-    .locator('input[type="file"]')
-    .setInputFiles({
-      name: "reglament.md",
-      mimeType: "text/markdown",
-      buffer: Buffer.from("# Проверка\nПроверить доступность узла"),
-    });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "reglament.md",
+    mimeType: "text/markdown",
+    buffer: Buffer.from("# Проверка\nПроверить доступность узла"),
+  });
   const request = await upload;
   expect(request.method()).toBe("POST");
   expect(request.headers()["content-type"]).toContain("multipart/form-data");

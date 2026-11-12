@@ -2,6 +2,7 @@ import logging
 
 from sqlalchemy import select, update
 
+from app.advice import effective_successful_check
 from app.models import Incident, Runbook
 
 
@@ -23,12 +24,13 @@ def refresh_recommendations(db, incident_id, search):
     if item is None or item.lifecycle != "firing" or item.recommendation_status != "pending":
         return
     generation = item.recommendation_generation
+    no_action = effective_successful_check(db, item)
     query = f"{item.title}. {item.description}"
     # Release the read transaction before running a potentially slow embedding model.
     db.commit()
     try:
-        hits = search(db, query)
-        status = "ready"
+        hits = [] if no_action else search(db, query)
+        status = "not_required" if no_action else "ready"
     except Exception:
         db.rollback()
         logging.getLogger(__name__).exception("Recommendation search failed: %s", incident_id)

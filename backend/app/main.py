@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, StrictBool
 from sqlalchemy import delete, func, select, text
 
 from app.accounts import router as accounts_router
+from app.advice import successful_check
 from app.auth import require_admin, require_operator
 from app.config import settings
 from app.db import get_db
@@ -82,6 +83,9 @@ def incident_public(db, row, operator=None):
         for key in ("severity", "category", "priority"):
             result[key] = getattr(correction, key)
         result.update(confidence=None, needs_review=False, rationale="Исправлено инженером")
+    if successful_check(result):
+        # Also cover snapshots produced before this policy was introduced.
+        result.update(recommendation_status="not_required", recommendations=[])
     if operator:
         feedback = {
             (entry.runbook_id, entry.revision): public(entry)
@@ -296,6 +300,20 @@ def runbooks(q: str = "", operator=Depends(require_operator), db=Depends(get_db)
             for row in db.scalars(select(Runbook).order_by(Runbook.created_at.desc()).limit(500))
         ],
         "semantic": False,
+    }
+
+
+@app.get("/api/runbooks/usefulness")
+def runbook_usefulness(operator=Depends(require_operator), db=Depends(get_db)):
+    """Cheap live metadata for a submitted search; no model or task queue."""
+    counts = usefulness_counts(db)
+    return {
+        book_id: {
+            "revision": revision,
+            "status": status,
+            **counts.get(book_id, {"helpful_count": 0, "not_helpful_count": 0}),
+        }
+        for book_id, revision, status in db.execute(select(Runbook.id, Runbook.revision, Runbook.status))
     }
 
 

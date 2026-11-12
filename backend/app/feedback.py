@@ -5,6 +5,7 @@ from copy import deepcopy
 from fastapi import HTTPException
 from sqlalchemy import func, select
 
+from app.advice import effective_successful_check
 from app.models import AuditEntry, ClassificationCorrection, Incident, RecommendationFeedback, utcnow
 
 FIELDS = ("severity", "category", "priority")
@@ -40,6 +41,7 @@ def correction_values(row):
 
 def save_correction(db, incident_id, operator, values):
     incident = locked_incident(db, incident_id)
+    was_successful_check = effective_successful_check(db, incident)
     row = db.scalar(
         select(ClassificationCorrection).where(ClassificationCorrection.incident_id == incident_id)
     )
@@ -58,6 +60,10 @@ def save_correction(db, incident_id, operator, values):
     row.input_snapshot = deepcopy(
         {"title": incident.title, "description": incident.description, "labels": incident.labels}
     )
+    if was_successful_check != effective_successful_check(db, incident):
+        incident.recommendation_status = "pending"
+        incident.recommendations = []
+        incident.recommendation_generation += 1
     db.add(
         AuditEntry(
             actor=operator.name,
@@ -84,6 +90,7 @@ def save_feedback(db, incident_id, runbook_id, operator, helpful, revision, gene
     )
     if (
         incident.recommendation_status != "ready"
+        or effective_successful_check(db, incident)
         or incident.recommendation_generation != generation
         or recommendation is None
     ):

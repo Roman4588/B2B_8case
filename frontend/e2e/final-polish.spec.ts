@@ -40,6 +40,18 @@ async function mount(page: Page) {
         ),
         semantic: !!url.searchParams.get("q"),
       };
+    if (url.pathname === "/api/runbooks/usefulness")
+      json = Object.fromEntries(
+        Array.from({ length: 25 }, (_, i) => [
+          `book-${i}`,
+          {
+            revision: 1,
+            status: "ready",
+            helpful_count: 0,
+            not_helpful_count: 0,
+          },
+        ]),
+      );
     if (url.pathname === "/api/jobs")
       json = Array.from({ length: 25 }, (_, i) => ({
         id: `job-${i}`,

@@ -13,6 +13,50 @@ CORRECTION = {"severity": "info", "category": "network", "priority": "P2", "comm
 PATH = "/api/incidents/test-event/classification"
 
 
+def test_successful_check_hides_legacy_advice_and_manual_override_restarts_search(client):
+    http, engine = client
+    login(http)
+    with Session(engine) as db:
+        item = db.get(Incident, "test-event")
+        item.title = "Плановая проверка приложения завершена"
+        item.description = "Health check completed."
+        item.severity, item.priority, item.needs_review = "info", "P4", False
+        item.recommendation_status = "ready"
+        item.recommendations = [{"id": "legacy", "title": "Отказ PostgreSQL"}]
+        db.commit()
+    body = http.get("/api/incidents/test-event").json()
+    assert body["recommendation_status"] == "not_required"
+    assert body["recommendations"] == []
+    result = http.put(PATH, json={**CORRECTION, "severity": "critical", "priority": "P1"})
+    assert result.status_code == 200
+    body = result.json()
+    assert body["recommendation_status"] == "pending"
+    assert body["recommendation_generation"] == 1
+    assert body["automatic_classification"]["severity"] == "info"
+
+
+def test_usefulness_metadata_is_authenticated_and_never_searches(client, monkeypatch):
+    import app.knowledge as knowledge
+
+    http, engine = client
+    assert http.get("/api/runbooks/usefulness").status_code == 401
+    login(http)
+    with Session(engine) as db:
+        db.add(Runbook(id="book-metadata", title="Example", condition="Example", steps=["Check"],
+                       status="ready", revision=2))
+        db.commit()
+
+    def forbidden(*args):
+        pytest.fail("Counter polling must not search or embed")
+
+    monkeypatch.setattr(knowledge, "search_runbooks", forbidden)
+    response = http.get("/api/runbooks/usefulness")
+    assert response.status_code == 200
+    assert response.json() == {"book-metadata": {
+        "revision": 2, "status": "ready", "helpful_count": 0, "not_helpful_count": 0,
+    }}
+
+
 def test_correction_auth_validation_idempotence_and_effective_queries(client):
     http, engine = client
     assert http.put(PATH, json=CORRECTION).status_code == 401
