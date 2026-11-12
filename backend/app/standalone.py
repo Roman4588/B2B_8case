@@ -76,11 +76,21 @@ def prepare_database():
     # Import before seeds, preserving existing account hashes and runbook IDs.
     from alembic import command
     from alembic.config import Config
+    from alembic.script import ScriptDirectory
 
     from app.db import engine
+    from app.migration_backup import backup_postgres
     from app.sqlite_migration import migrate_sqlite
 
-    command.upgrade(Config("/app/alembic.ini"), "head")
+    migration_config = Config("/app/alembic.ini")
+    target = ScriptDirectory.from_config(migration_config).get_current_head()
+    dsn = "dbname=copilot user=postgres host=/run/postgresql"
+    with psycopg.connect(dsn, autocommit=True) as db:
+        exists = db.execute("SELECT to_regclass('public.alembic_version')").fetchone()[0]
+        current = [row[0] for row in db.execute("SELECT version_num FROM alembic_version")] if exists else []
+        if current and current != [target]:
+            backup_postgres(dsn, Path("/data/migration-backups"), current, target)
+    command.upgrade(migration_config, "head")
     result = migrate_sqlite(Path("/data/app.db"), engine())
     print("Legacy database import:", result, flush=True)
 

@@ -16,6 +16,10 @@ def embedding_model():
     from fastembed import TextEmbedding
 
     config = settings()
+    if not config.embedding_memory_arena:
+        from app.compact_embeddings import CompactTextEmbedding
+
+        TextEmbedding = CompactTextEmbedding
     config.model_cache.mkdir(parents=True, exist_ok=True)
     return TextEmbedding(
         model_name=config.model_name,
