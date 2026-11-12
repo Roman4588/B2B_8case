@@ -214,6 +214,7 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
                     "event-row " + (selected === item.id ? "selected" : "")
                   }
                   key={item.id}
+                  data-incident-id={item.id}
                   aria-pressed={selected === item.id}
                   onClick={(event) => {
                     selectedRow.current = event.currentTarget;

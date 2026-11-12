@@ -31,7 +31,14 @@ test("real backend: responsive screens, persistent drafts and keyboard return", 
       ).toBe(true);
     };
     await capture("events");
-    const row = page.locator(".event-row").first();
+    // Polling can reorder equally ranked events; return to the opened ID,
+    // even when that event is no longer the first row.
+    const openedId = await page
+      .locator(".event-row")
+      .first()
+      .getAttribute("data-incident-id");
+    expect(openedId).toBeTruthy();
+    const row = page.locator(`.event-row[data-incident-id="${openedId}"]`);
     await row.click();
     await expect(page.locator(".detail-title")).toBeVisible();
     await capture("detail");
