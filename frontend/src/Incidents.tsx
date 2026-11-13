@@ -6,6 +6,7 @@ import {
   Copy,
   Filter,
   Search,
+  ShieldCheck,
   ClipboardList,
   RefreshCw,
   X,
@@ -19,6 +20,7 @@ import {
   categoryNames,
   Empty,
   handlingNames,
+  SafetyNote,
   SeverityBadge,
   time,
 } from "./ui";
@@ -270,6 +272,12 @@ export function Incidents({ onChanged }: { onChanged: () => void }) {
               </button>
             </div>
           )}
+          <div className="panel-footer">
+            <span>
+              <ShieldCheck size={14} /> Ни одно действие не выполняется
+              автоматически
+            </span>
+          </div>
         </section>
         <aside
           ref={detailPanel}
@@ -704,6 +712,7 @@ function Detail({
             {message}
           </div>
         )}
+        <SafetyNote />
       </div>
     </div>
   );

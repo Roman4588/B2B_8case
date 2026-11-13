@@ -7,6 +7,7 @@ import {
   Info,
   Layers3,
   Server,
+  ShieldCheck,
 } from "lucide-react";
 import type { Category, Severity } from "./types";
 
@@ -98,6 +99,17 @@ export function Empty({
       <CheckCircle2 size={32} />
       <h3>{title}</h3>
       <p>{description}</p>
+    </div>
+  );
+}
+export function SafetyNote() {
+  return (
+    <div className="safety-note">
+      <ShieldCheck size={17} />
+      <span>
+        Решение за инженером. Ассистент рекомендует действия, вы выполняете их
+        вручную.
+      </span>
     </div>
   );
 }

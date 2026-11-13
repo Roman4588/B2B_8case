@@ -67,6 +67,9 @@
 .events-screen abbr {
   text-decoration: none;
 }
+.events-screen .safety-note {
+  overflow-wrap: anywhere;
+}
 .events-screen .page-footer {
   align-items: flex-start;
   line-height: 1.6;

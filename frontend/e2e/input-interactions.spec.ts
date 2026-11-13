@@ -44,5 +44,5 @@ test('recommendation footer belongs to events, not profile or knowledge', async 
   await page.getByRole('navigation').getByRole('button',{name:'Мой профиль'}).click();
   await expect(page.locator('.page-footer')).toHaveCount(0);
   await page.getByRole('navigation').getByRole('button',{name:/^События/}).click();
-  await expect(page.locator('.page-footer')).toContainText('Ассистент рекомендует — инженер выполняет действия вручную');
+  await expect(page.locator('.page-footer')).toContainText('Только рекомендации');
 });

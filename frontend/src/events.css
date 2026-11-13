@@ -433,6 +433,17 @@ body {
 .events-screen :is(.handling.accepted, .handling.completed) {
   color: var(--color-success);
 }
+.events-screen .panel-footer {
+  margin-top: auto;
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--color-rule);
+  background: var(--color-paper);
+  color: var(--color-muted);
+}
+.events-screen .panel-footer span {
+  font-size: 12px;
+  gap: var(--space-xs);
+}
 .events-screen .pagination {
   padding: var(--space-sm) var(--space-md);
   border-top: 1px solid var(--color-rule);
@@ -686,6 +697,13 @@ body {
 }
 .events-screen .secondary:hover {
   background: var(--color-paper-3);
+}
+.events-screen .safety-note {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: var(--space-md);
+  gap: var(--space-xs);
 }
 .events-screen .incident-history {
   margin: 0;

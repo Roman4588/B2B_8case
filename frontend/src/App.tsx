@@ -255,8 +255,8 @@ function Workspace({
           {page === "incidents" && (
             <footer className="page-footer">
               <span>
-                <ShieldCheck size={14} /> Ассистент рекомендует — инженер
-                выполняет действия вручную
+                <ShieldCheck size={14} /> Только рекомендации. Все действия
+                выполняет инженер.
               </span>
               <span>
                 Последняя синхронизация:{" "}
