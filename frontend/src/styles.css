@@ -742,17 +742,6 @@ small {
   margin-left: auto;
   font-size: 12px;
 }
-.panel-footer {
-  padding: 13px 15px;
-  color: #9ba8ae;
-  background: #fdfefe;
-}
-.panel-footer span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-}
 .pagination {
   display: flex;
   justify-content: space-between;
@@ -1018,18 +1007,6 @@ small {
 }
 .actions .secondary {
   flex: 0;
-}
-.safety-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  color: #8ea195;
-  font-size: 12px;
-  line-height: 1.7;
-  margin-top: 14px;
-}
-.safety-note svg {
-  flex-shrink: 0;
 }
 .detail-content > .hint {
   margin: 0 20px 15px;
@@ -2186,9 +2163,6 @@ small {
   font-size: 12px;
 }
 .actions button {
-  font-size: 12px;
-}
-.safety-note {
   font-size: 12px;
 }
 .current-state {

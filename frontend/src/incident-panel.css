@@ -162,10 +162,6 @@
   min-height: 40px;
   padding: var(--space-xs) var(--space-sm);
 }
-.events-screen .incident-detail .safety-note {
-  margin-top: var(--space-xs);
-  line-height: 1.45;
-}
 .events-screen .incident-detail .manual-controls .hint {
   margin: var(--space-xs) 0 0;
   padding: var(--space-xs);
@@ -210,9 +206,6 @@
   }
   .events-screen .incident-detail .actions .secondary {
     flex: 1;
-  }
-  .events-screen .incident-detail .safety-note {
-    font-size: 12px;
   }
 }
 @media (max-width: 1100px) {
@@ -263,10 +256,34 @@
   .events-screen .incident-detail .detail-facts > span {
     flex: 1 1 120px;
   }
-  .events-screen .incident-detail .safety-note {
-    display: none;
-  }
   .events-screen .incident-detail .incident-reading {
     min-height: 72px;
+  }
+}
+/* The single section-wide explanation remains reachable above the mobile overlay. */
+@media (max-width: 1100px) {
+  .events-screen {
+    --event-guidance-height: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+  .events-screen:has(.detail-panel.has-selection)
+    .page-footer
+    > span:first-child {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: calc(var(--z-modal) + 1);
+    box-sizing: border-box;
+    height: var(--event-guidance-height);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--color-rule);
+    background: var(--color-paper);
+    align-items: flex-start;
+  }
+  .events-screen .detail-panel.has-selection {
+    bottom: var(--event-guidance-height);
+    height: calc(100dvh - var(--event-guidance-height));
+  }
+  .events-screen .detail-panel.has-selection .incident-detail {
+    height: 100%;
+    min-height: 0;
   }
 }
